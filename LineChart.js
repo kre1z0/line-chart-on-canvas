@@ -1,6 +1,7 @@
 class LineChart {
   constructor({ root, data }) {
-    this.data = data;
+    this.data = this.normalizeData(data);
+    this.root = root;
     this.canvas = document.createElement("canvas");
     root.appendChild(this.canvas);
     this.init();
@@ -9,40 +10,59 @@ class LineChart {
   ticks = 5;
   width = 1000;
   height = 300;
-  max = 0;
-  cache = {};
+  padding = 20;
 
   init() {
     const canvas = this.canvas;
     canvas.setAttribute("width", this.width);
     canvas.setAttribute("height", this.height);
-    this.horizontalGrid();
-    this.drawColumns();
+    this.draw(this.data);
   }
 
-  normalizeData(columns) {
+  normalizeData(data) {
+    const { columns, colors } = data;
     const { width } = this;
 
-    const data = [];
+    const normalizedData = [];
 
     for (let i = 0; i < columns.length; i++) {
-      const values = columns[i];
-      const name = values.splice(0, 1)[0];
+      const name = columns[i][0];
+      const values = columns[i].slice(1);
 
-      if (name !== "x") {
-        this.max = Math.max(this.max, ...values);
-      }
-
-      data.push({
+      const obj = {
         values,
         coordinates: values.map((v, i) => ({
           x: i !== 0 ? (width / (values.length - 1)) * i : 0
         })),
         name
-      });
+      };
+
+      if (name !== "x") {
+        const color = colors[name];
+        normalizedData.push({
+          ...obj,
+          color,
+          max: Math.max(...values)
+        });
+      } else {
+        normalizedData.push(obj);
+      }
     }
 
-    return data;
+    return normalizedData;
+  }
+
+  onClickControlBtn(name) {
+    console.info("--> onClickControlBtn ggwp", name);
+  }
+
+  setControlButton(name) {
+    if (name !== "x") {
+      const button = document.createElement("button");
+      button.innerHTML = name;
+      button.addEventListener("click", () => this.onClickControlBtn(name));
+      this.root.appendChild(button);
+    }
   }
 
   drawLine(data, color, max) {
@@ -67,19 +87,29 @@ class LineChart {
     }
   }
 
-  drawColumns() {
-    const { columns, colors } = this.data;
-    const data = this.normalizeData(columns);
+  draw(data) {
+    const max = data.reduce(
+      (prevMax, { max }) => Math.max(prevMax, max || 0),
+      0
+    );
+    const maxLength = Math.ceil(Math.log10(max + 1));
+    const roundedMax = roundUsing(max, Math.round, -maxLength + 1);
+    const yScale = Array.from(
+      { length: this.ticks },
+      (_, index) => (roundedMax / this.ticks) * index
+    );
+
+    this.horizontalGrid(yScale);
 
     for (let i = 0; i < data.length; i++) {
-      const { name } = data[i];
-      const color = colors[name];
+      const { name, color } = data[i];
 
-      this.drawLine(data[i], color, this.max);
+      this.drawLine(data[i], color, roundedMax);
+      this.setControlButton(name);
     }
   }
 
-  horizontalGrid() {
+  horizontalGrid(yScale) {
     const { width, height, ticks } = this;
     const canvas = this.canvas;
     const ctx = canvas.getContext("2d");
@@ -91,7 +121,7 @@ class LineChart {
     for (let i = 0; i < array.length; i++) {
       const y = i !== 0 ? height - i * (height / ticks) - 0.5 : height - 0.5;
       ctx.fillStyle = "#9CA1A6";
-      ctx.fillText("250", 0, y - 8);
+      ctx.fillText(yScale[i], 0, y - 8);
       ctx.strokeStyle = "#F4F4F4";
       ctx.lineWidth = 1;
       ctx.moveTo(0, y);
