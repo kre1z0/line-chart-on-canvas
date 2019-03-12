@@ -1,29 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Telegram competition</title>
-    <link rel="stylesheet" href="./styles.css">
-    <link rel="stylesheet" href="./chart.css">
-</head>
-<body>
-<h2>
-    Followers
-</h2>
-<div id="root"></div>
-<canvas id="chart"></canvas>
-<script src="./utils.js"></script>
-<script src="./LineChart.js"></script>
-<script>
-    fetch("./chart_data.json")
-      .then(response => response.json())
-      .then(res => {
-          console.info('--> fetch ggwp', res);
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./chart.css" />
+  </head>
+  <body>
+    <h2>
+      Followers
+    </h2>
+    <div id="root"></div>
+    <select id="select">
+      <option>1</option>
+      <option>2</option>
+      <option>3</option>
+      <option>4</option>
+      <option>5</option>
+    </select>
+    <script src="./utils.js"></script>
+    <script src="./LineChart.js"></script>
+    <script>
+      fetch("./chart_data.json")
+        .then(response => response.json())
+        .then(res => {
+          console.info("--> fetch ggwp", res);
           const root = document.getElementById("root");
           const data = res[0];
-          // const newData = data.columns.forEach(col => col.splice(1, 104));
-          const chart = new LineChart({ root, data });
-      });
-</script>
-</body>
+          // data.columns.forEach(col => col.splice(1, 104));
+          let chart = new LineChart({ root, data });
+          const select = document.getElementById("select");
+          select.addEventListener("change", e => {
+            chart.destroy();
+            const value = +e.target.value - 1;
+            chart = new LineChart({ root, data: res[value] });
+          });
+        });
+    </script>
+  </body>
 </html>
