@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Telegram competition</title>
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./chart.css">
 </head>
 <body>
 <h2>
@@ -20,6 +21,7 @@
           console.info('--> fetch ggwp', res);
           const root = document.getElementById("root");
           const data = res[0];
+          // const newData = data.columns.forEach(col => col.splice(1, 104));
           const chart = new LineChart({ root, data });
       });
 </script>
