@@ -130,12 +130,14 @@ class LineChart {
     const { previewCanvas } = nodes;
 
     this.startPanelGrabbing = null;
-    document.body.style.cursor = "";
+    document.documentElement.style.cursor = "";
 
-    const insidePanel = this.insidePanel(e);
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
-    if (insidePanel) {
+    if (move) {
       previewCanvas.node.style.cursor = "grab";
+    } else if (leftBorder || rightBorder) {
+      previewCanvas.node.style.cursor = "col-resize";
     } else {
       previewCanvas.node.style.cursor = "default";
     }
@@ -147,30 +149,43 @@ class LineChart {
 
     this.startPanelGrabbing = x;
 
-    const insidePanel = this.insidePanel(e);
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
-    if (insidePanel) {
-      document.body.style.cursor = "grabbing";
+    if (move) {
+      document.documentElement.style.cursor = "grabbing";
       previewCanvas.node.style.cursor = "grabbing";
+    } else if (leftBorder || rightBorder) {
+      document.documentElement.style.cursor = "col-resize";
     }
   }
 
   insidePanel(e) {
+    const { controlBorderWidth } = this;
     const { x, y } = getPosition(e);
     const panelReact = this.getPanelRect();
+    const [xMin, yMin, xMax, yMax] = panelReact;
 
-    return isDotInsideRect([x, y], panelReact);
+    const leftBorderRect = [xMin - controlBorderWidth, yMin, xMin + controlBorderWidth, yMax];
+    const rightBorderRect = [xMax, yMin, xMax + controlBorderWidth, yMax];
+
+    return {
+      leftBorder: isDotInsideRect([x, y], leftBorderRect),
+      rightBorder: isDotInsideRect([x, y], rightBorderRect),
+      move: isDotInsideRect([x, y], panelReact),
+    };
   }
 
   handleMove(e) {
     const { nodes, startPanelGrabbing } = this;
     const { previewCanvas } = nodes;
 
-    const insidePanel = this.insidePanel(e);
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
     if (startPanelGrabbing === null) {
-      if (insidePanel) {
+      if (move) {
         previewCanvas.node.style.cursor = "grab";
+      } else if (leftBorder || rightBorder) {
+        previewCanvas.node.style.cursor = "col-resize";
       } else {
         previewCanvas.node.style.cursor = "default";
       }
