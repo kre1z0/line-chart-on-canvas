@@ -81,10 +81,26 @@ function getMaxValue(data) {
   return roundUsing(max, Math.ceil, -maxLength + 2);
 }
 
-function getSectionWidth(items, containerWidth) {
-  const length = items.length - 1;
-  const remainder = containerWidth % length;
-  return Math.floor(containerWidth / length) + remainder / length;
+function getDataMaxLength(data) {
+  let max = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    max = Math.max(max, data[i].values.length);
+  }
+
+  return max;
+}
+
+function getLineLength(data, containerWidth, withRemainder = true) {
+  const length = getDataMaxLength(data) - 1;
+
+  if (withRemainder) {
+    const remainder = containerWidth % length;
+
+    return Math.floor(containerWidth / length) + remainder / length;
+  } else {
+    return containerWidth / length;
+  }
 }
 
 function isDotInsideRect(position, rect) {
