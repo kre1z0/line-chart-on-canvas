@@ -29,12 +29,13 @@ class LineChart {
     this.init();
   }
 
+  lineWidth = 44;
   controlBorderWidth = 5;
-  start = 0;
+  startPanelGrabbing = null;
   translateX = 0;
 
   init() {
-    const { nodes, data } = this;
+    const { nodes, data, lineWidth } = this;
     const {
       canvas,
       previewCanvas: { node: previewCanvas, padding },
@@ -62,12 +63,14 @@ class LineChart {
     const max = getMaxValue(data);
     const { width: previewCanvasWidth } = previewCanvas.getBoundingClientRect();
 
+    this.translateX = 444;
     this.fillPreviewCanvas(444);
 
     data.forEach(item => {
       if (item.type === "line") {
         // main canvas
-        this.drawLine({ data: item, max, canvas, width: 44 });
+        this.drawLine({ data: item, max, canvas, width: lineWidth });
+
         // preview canvas
         this.drawLine({
           data: item,
@@ -78,6 +81,69 @@ class LineChart {
         });
       }
     });
+    window.addEventListener("mousemove", this.handleMove.bind(this));
+    window.addEventListener("mousedown", this.handleDown.bind(this));
+    window.addEventListener("mouseup", this.handleUp.bind(this));
+  }
+
+  handleUp(e) {
+    const { nodes } = this;
+    const { previewCanvas } = nodes;
+
+    this.startPanelGrabbing = null;
+    document.body.style.cursor = "";
+
+    const insidePanel = this.insidePanel(e);
+
+    if (insidePanel) {
+      previewCanvas.node.style.cursor = "grab";
+    } else {
+      previewCanvas.node.style.cursor = "default";
+    }
+  }
+
+  handleDown(e) {
+    const { previewCanvas } = this.nodes;
+    const { x } = getPosition(e);
+
+    this.startPanelGrabbing = x;
+
+    const insidePanel = this.insidePanel(e);
+
+    if (insidePanel) {
+      document.body.style.cursor = "grabbing";
+      previewCanvas.node.style.cursor = "grabbing";
+    }
+  }
+
+  insidePanel(e) {
+    const { x, y } = getPosition(e);
+    const panelReact = this.getPanelRect();
+    return isDotInsideRect([x, y], panelReact);
+  }
+
+  handleMove(e) {
+    const { nodes, startPanelGrabbing } = this;
+    const { previewCanvas } = nodes;
+
+    const insidePanel = this.insidePanel(e);
+
+    if (startPanelGrabbing === null) {
+      if (insidePanel) {
+        previewCanvas.node.style.cursor = "grab";
+      } else {
+        previewCanvas.node.style.cursor = "default";
+      }
+    }
+  }
+
+  getPanelRect() {
+    const { translateX, controlBorderWidth, nodes } = this;
+    const {
+      previewCanvas: { height },
+    } = nodes;
+
+    return [translateX + controlBorderWidth, 0, translateX + 244 - controlBorderWidth, height];
   }
 
   drawLine({ data, max, canvas, width, alpha }) {

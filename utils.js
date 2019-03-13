@@ -18,8 +18,12 @@ function hexToRGB(hex, alpha) {
   }
 }
 
-function getPositionX(e) {
-  return e.type === "touchmove" ? e.touches[0].pageX : e.clientX;
+function getPosition(e) {
+  const { left, top } = e.target.getBoundingClientRect();
+
+  return e.type === "touchmove"
+    ? { x: e.touches[0].pageX - left, y: e.touches[0].pageY - top }
+    : { x: e.clientX - left, y: e.clientY - top };
 }
 
 function rateLimit(n, min, max) {
@@ -81,4 +85,11 @@ function getSectionWidth(items, containerWidth) {
   const length = items.length - 1;
   const remainder = containerWidth % length;
   return Math.floor(containerWidth / length) + remainder / length;
+}
+
+function isDotInsideRect(position, rect) {
+  const [x, y] = position;
+  const [xMin, yMin, xMax, yMax] = rect;
+
+  return xMin <= x && xMax >= x && yMin <= y && yMax >= y;
 }
