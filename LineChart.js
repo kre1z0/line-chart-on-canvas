@@ -73,7 +73,7 @@ class LineChart {
     data.forEach(item => {
       if (item.type === "line") {
         // main canvas
-        this.drawLine({ data: item, maxValue: this.maxValue, canvas, lineLength });
+        this.drawLine({ data: item, maxValue: this.maxValue, canvas, lineLength, lineWidth: 3 });
 
         // preview canvas
         this.drawLine({
@@ -81,6 +81,7 @@ class LineChart {
           maxValue: this.maxValue,
           canvas: nodes.previewCanvas,
           lineLength: this.lineLengthPreviewCanvas,
+          lineWidth: 1.5,
         });
         this.initControl(item);
       }
@@ -101,7 +102,7 @@ class LineChart {
     text.innerText = `graph ${name}`;
     const icon = document.createElement("div");
     icon.classList.add(`${this.classNamePrefix}-checkmark-icon`);
-    icon.style.backgroundColor = color;
+    // icon.style.backgroundColor = color;
     icon.style.borderColor = color;
     label.classList.add(`${this.classNamePrefix}-control`);
     const input = document.createElement("input");
@@ -128,7 +129,7 @@ class LineChart {
     ctx.clearRect(0, 0, width, height);
   }
 
-  drawLine({ data, maxValue, canvas, lineLength }) {
+  drawLine({ data, maxValue, canvas, lineLength, lineWidth }) {
     const { offset } = this;
     const { values, color } = data;
     const { node } = canvas;
@@ -141,18 +142,20 @@ class LineChart {
     let prevY = 0;
 
     values.forEach((value, i) => {
-      const x = i !== 0 ? lineLength * i - 0.5 + left : 0 + left;
-      const y = height - (((value * 100) / maxValue) * height) / 100 - 0.5;
+      const x = i !== 0 ? lineLength * i + left : left + lineWidth / 2;
+      const y = height - (((value * 100) / maxValue) * height) / 100;
 
       ctx.beginPath();
-      // ctx.arc(x, y, 44, 0, 4);
+
       if (i > 0) {
-        ctx.moveTo(prevX + 0, prevY);
+        ctx.moveTo(prevX, prevY);
       }
 
+      ctx.lineCap = "round";
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = lineWidth;
       ctx.lineTo(x, y);
+
       ctx.stroke();
 
       prevX = x;
@@ -292,7 +295,7 @@ class LineChart {
 
     ctx.beginPath();
     // after
-    ctx.rect(x + panelWidth + left, 0, width - left - right - x - panelWidth, height);
+    ctx.rect(x + panelWidth + left + 1.5, 0, width - left - right - x - panelWidth, height);
     ctx.fill();
 
     // center
