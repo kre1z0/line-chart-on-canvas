@@ -16,7 +16,9 @@ class LineChart {
         },
       },
       previewCanvas: {
+        backNode: document.createElement("canvas"),
         node: document.createElement("canvas"),
+        panelCanvas: document.createElement("canvas"),
         height: 54,
         padding: {
           left: 20,
@@ -41,12 +43,12 @@ class LineChart {
     const { nodes, data, lineLength } = this;
     const {
       canvas,
-      previewCanvas: { node: previewCanvas, padding },
+      previewCanvas: { node: previewCanvas, padding, backNode },
     } = nodes;
     const { left, right } = padding;
 
     Object.keys(nodes).forEach((key, i, array) => {
-      const { node, height } = nodes[key];
+      const { node, height, backNode } = nodes[key];
 
       node.classList.add(`${this.classNamePrefix}-${key}`);
       if (i > 0) {
@@ -57,6 +59,12 @@ class LineChart {
         if (height) {
           node.setAttribute("height", height);
         }
+
+        if (backNode) {
+          backNode.setAttribute("width", width);
+          backNode.setAttribute("height", height);
+        }
+
         container.appendChild(node);
       } else {
         this.root.appendChild(node);
@@ -85,6 +93,10 @@ class LineChart {
         });
       }
     });
+
+    const backCtx = backNode.getContext("2d");
+    backCtx.drawImage(previewCanvas, 0, 0);
+
     this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
     window.addEventListener("mousemove", this.handleMove.bind(this));
     window.addEventListener("mousedown", this.handleDown.bind(this));
@@ -160,7 +172,7 @@ class LineChart {
   }
 
   handleMove(e) {
-    const { data, nodes, startPanelGrabbing, panelW, maxValue, lineLengthPreviewCanvas } = this;
+    const { nodes, startPanelGrabbing, panelW } = this;
     const { previewCanvas } = nodes;
     const { padding } = previewCanvas;
 
@@ -185,19 +197,8 @@ class LineChart {
       );
 
       this.clearCanvas(previewCanvas.node);
-
-      data.forEach(item => {
-        if (item.type === "line") {
-          // preview canvas
-          this.drawLine({
-            data: item,
-            maxValue,
-            canvas: nodes.previewCanvas,
-            lineLength: lineLengthPreviewCanvas,
-          });
-        }
-      });
-
+      const ctx = previewCanvas.node.getContext("2d");
+      ctx.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(nextX, this.panelW);
     }
   }
