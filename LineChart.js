@@ -27,6 +27,7 @@ class LineChart {
     this.lineLengthPreviewCanvas = 0;
     this.lineLength = window.innerWidth / (getDataMaxLength(this.data) / 4);
     this.classNamePrefix = "tgLineChart";
+    this.disabledLines = [];
     this.init();
   }
 
@@ -87,12 +88,25 @@ class LineChart {
     icon.style.borderColor = color;
     label.classList.add(`${this.classNamePrefix}-control`);
     const input = document.createElement("input");
+    input.addEventListener("change", this.onChange.bind(this, name));
     label.appendChild(input);
     label.appendChild(icon);
     label.appendChild(text);
     input.setAttribute("type", "checkbox");
     input.setAttribute("checked", "checked");
     container.node.appendChild(label);
+  }
+
+  onChange(name) {
+    const { disabledLines } = this;
+    const isDisabled = disabledLines.some(item => item === name);
+
+    if (isDisabled) {
+      this.disabledLines = disabledLines.filter(item => item !== name);
+    } else {
+      this.disabledLines.push(name);
+    }
+    console.info("--> onChange ggwp", { isDisabled, name, array: this.disabledLines });
   }
 
   appendNodes() {
