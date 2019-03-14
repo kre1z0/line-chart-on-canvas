@@ -9,7 +9,7 @@ class LineChart {
       },
       canvas: {
         node: document.createElement("canvas"),
-        height: 440,
+        height: 400,
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
@@ -38,42 +38,24 @@ class LineChart {
     } = nodes;
     const { left, right } = offset;
 
-    Object.keys(nodes).forEach((key, i, array) => {
-      const { node, height, backNode } = nodes[key];
-
-      node.classList.add(`${this.classNamePrefix}-${key}`);
-      if (i > 0) {
-        const { node: container } = nodes[array[0]];
-
-        const { width } = container.getBoundingClientRect();
-        node.setAttribute("width", width);
-        if (height) {
-          node.setAttribute("height", height);
-        }
-
-        if (backNode) {
-          backNode.setAttribute("width", width);
-          backNode.setAttribute("height", height);
-        }
-
-        container.appendChild(node);
-      } else {
-        this.root.appendChild(node);
-      }
-    });
+    this.appendNodes();
 
     this.maxValue = getMaxValue(data);
     const previewCanvasWidth = previewCanvas.getBoundingClientRect().width - left - right;
-
     this.panelW = this.getPanelWidthFromLineLength();
     this.panelX = previewCanvasWidth - this.panelW;
-
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
 
     data.forEach(item => {
       if (item.type === "line") {
         // main canvas
-        this.drawLine({ data: item, maxValue: this.maxValue, canvas, lineLength, lineWidth: 3 });
+        this.drawLine({
+          data: item,
+          maxValue: this.maxValue,
+          canvas,
+          lineLength,
+          lineWidth: 3,
+        });
 
         // preview canvas
         this.drawLine({
@@ -102,7 +84,6 @@ class LineChart {
     text.innerText = `graph ${name}`;
     const icon = document.createElement("div");
     icon.classList.add(`${this.classNamePrefix}-checkmark-icon`);
-    // icon.style.backgroundColor = color;
     icon.style.borderColor = color;
     label.classList.add(`${this.classNamePrefix}-control`);
     const input = document.createElement("input");
@@ -112,6 +93,34 @@ class LineChart {
     input.setAttribute("type", "checkbox");
     input.setAttribute("checked", "checked");
     container.node.appendChild(label);
+  }
+
+  appendNodes() {
+    const { nodes } = this;
+
+    Object.keys(nodes).forEach((key, i, array) => {
+      const { node, height, backNode } = nodes[key];
+
+      node.classList.add(`${this.classNamePrefix}-${key}`);
+      if (i > 0) {
+        const { node: container } = nodes[array[0]];
+
+        const { width } = container.getBoundingClientRect();
+        node.setAttribute("width", width);
+        if (height) {
+          node.setAttribute("height", height);
+        }
+
+        if (backNode) {
+          backNode.setAttribute("width", width);
+          backNode.setAttribute("height", height);
+        }
+
+        container.appendChild(node);
+      } else {
+        this.root.appendChild(node);
+      }
+    });
   }
 
   setListeners() {
@@ -141,12 +150,11 @@ class LineChart {
     let prevX = 0;
     let prevY = 0;
 
-    values.forEach((value, i) => {
+    for (let i = 0; i < values.length; i++) {
       const x = i !== 0 ? lineLength * i + left : left + lineWidth / 2;
-      const y = height - (((value * 100) / maxValue) * height) / 100;
+      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
 
       ctx.beginPath();
-
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
       }
@@ -160,7 +168,7 @@ class LineChart {
 
       prevX = x;
       prevY = y;
-    });
+    }
   }
 
   getPanelWidthFromLineLength() {
