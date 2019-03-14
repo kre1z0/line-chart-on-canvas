@@ -34,6 +34,8 @@ class LineChart {
   startPanelGrabbing = null;
   panelX = 0;
   panelW = 0;
+  maxValue = 0;
+  lineLengthPreviewCanvas = 0;
 
   init() {
     const { nodes, data, lineLength } = this;
@@ -61,36 +63,68 @@ class LineChart {
       }
     });
 
-    const max = getMaxValue(data);
+    this.maxValue = getMaxValue(data);
     const previewCanvasWidth = previewCanvas.getBoundingClientRect().width - left - right;
 
     this.panelW = this.getPanelWidthFromLineLength();
-
     this.panelX = previewCanvasWidth - this.panelW;
 
-    this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
-
-    const lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
+    this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
 
     data.forEach(item => {
       if (item.type === "line") {
         // main canvas
-        this.drawLine({ data: item, max, canvas, lineLength });
+        this.drawLine({ data: item, maxValue: this.maxValue, canvas, lineLength });
 
         // preview canvas
         this.drawLine({
           data: item,
-          max,
+          maxValue: this.maxValue,
           canvas: nodes.previewCanvas,
-          lineLength: lineLengthPreviewCanvas,
-          alpha: 0.24,
+          lineLength: this.lineLengthPreviewCanvas,
         });
       }
     });
-
+    this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
     window.addEventListener("mousemove", this.handleMove.bind(this));
     window.addEventListener("mousedown", this.handleDown.bind(this));
     window.addEventListener("mouseup", this.handleUp.bind(this));
+  }
+
+  clearCanvas(canvas) {
+    const { width, height } = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, width, height);
+  }
+
+  drawLine({ data, maxValue, canvas, lineLength }) {
+    const { values, color } = data;
+    const { node, padding } = canvas;
+    const { left = 0 } = padding;
+
+    const { height } = node.getBoundingClientRect();
+    const ctx = node.getContext("2d");
+
+    let prevX = 0;
+    let prevY = 0;
+
+    values.forEach((value, i) => {
+      const x = i !== 0 ? lineLength * i - 0.5 + left : 0 + left;
+      const y = height - (((value * 100) / maxValue) * height) / 100 - 0.5;
+
+      ctx.beginPath();
+
+      if (i > 0) {
+        ctx.moveTo(prevX, prevY);
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      prevX = x;
+      prevY = y;
+    });
   }
 
   getPanelWidthFromLineLength() {
@@ -125,12 +159,60 @@ class LineChart {
     ];
   }
 
-  handleUp(e) {
-    const { nodes } = this;
+  handleMove(e) {
+    const { data, nodes, startPanelGrabbing, panelW, maxValue, lineLengthPreviewCanvas } = this;
     const { previewCanvas } = nodes;
+    const { padding } = previewCanvas;
 
-    this.startPanelGrabbing = null;
-    document.documentElement.style.cursor = "";
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
+
+    if (startPanelGrabbing === null) {
+      if (move) {
+        previewCanvas.node.style.cursor = "grab";
+      } else if (leftBorder || rightBorder) {
+        previewCanvas.node.style.cursor = "col-resize";
+      } else {
+        previewCanvas.node.style.cursor = "default";
+      }
+    } else if (isNumeric(startPanelGrabbing)) {
+      const { width } = previewCanvas.node.getBoundingClientRect();
+      const { x } = getPosition(e);
+      const positionX = x - startPanelGrabbing;
+      const nextX = rateLimit(
+        this.panelX + positionX,
+        0,
+        width - panelW - padding.left - padding.right,
+      );
+
+      this.clearCanvas(previewCanvas.node);
+
+      data.forEach(item => {
+        if (item.type === "line") {
+          // preview canvas
+          this.drawLine({
+            data: item,
+            maxValue,
+            canvas: nodes.previewCanvas,
+            lineLength: lineLengthPreviewCanvas,
+          });
+        }
+      });
+
+      this.fillPreviewCanvas(nextX, this.panelW);
+    }
+  }
+
+  handleUp(e) {
+    const { nodes, startPanelGrabbing, panelX } = this;
+    const { previewCanvas } = nodes;
+    const { x } = getPosition(e);
+
+    if (isNumeric(startPanelGrabbing)) {
+      const positionX = x - startPanelGrabbing;
+      this.panelX = panelX + positionX;
+      this.startPanelGrabbing = null;
+      document.documentElement.style.cursor = "";
+    }
 
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
@@ -146,12 +228,10 @@ class LineChart {
   handleDown(e) {
     const { previewCanvas } = this.nodes;
     const { x } = getPosition(e);
-
-    this.startPanelGrabbing = x;
-
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
     if (move) {
+      this.startPanelGrabbing = x;
       document.documentElement.style.cursor = "grabbing";
       previewCanvas.node.style.cursor = "grabbing";
     } else if (leftBorder || rightBorder) {
@@ -175,58 +255,6 @@ class LineChart {
     };
   }
 
-  handleMove(e) {
-    const { nodes, startPanelGrabbing } = this;
-    const { previewCanvas } = nodes;
-
-    const { move, leftBorder, rightBorder } = this.insidePanel(e);
-
-    if (startPanelGrabbing === null) {
-      if (move) {
-        previewCanvas.node.style.cursor = "grab";
-      } else if (leftBorder || rightBorder) {
-        previewCanvas.node.style.cursor = "col-resize";
-      } else {
-        previewCanvas.node.style.cursor = "default";
-      }
-    }
-  }
-
-  drawLine({ data, max, canvas, lineLength, alpha }) {
-    const { values, color } = data;
-    const { node, padding } = canvas;
-    const { left = 0 } = padding;
-
-    const { height } = node.getBoundingClientRect();
-    const ctx = node.getContext("2d");
-
-    let prevX = 0;
-    let prevY = 0;
-
-    values.forEach((value, i) => {
-      ctx.beginPath();
-
-      if (i > 0) {
-        ctx.moveTo(prevX, prevY);
-      }
-
-      const x = i !== 0 ? lineLength * i - 0.5 + left : 0 + left;
-      const y = height - (((value * 100) / max) * height) / 100 - 0.5;
-
-      if (alpha) {
-        ctx.strokeStyle = hexToRGB(color, alpha);
-      } else {
-        ctx.strokeStyle = color;
-      }
-
-      ctx.lineWidth = 2;
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      prevX = x;
-      prevY = y;
-    });
-  }
-
   fillPreviewCanvas(x, panelWidth) {
     const { nodes, controlBorderWidth } = this;
     const {
@@ -237,9 +265,8 @@ class LineChart {
     const { width, height } = previewCanvas.getBoundingClientRect();
     const ctx = previewCanvas.getContext("2d");
 
-    ctx.clearRect(0, 0, width, height);
     ctx.beginPath();
-    ctx.fillStyle = "#F4F9FC";
+    ctx.fillStyle = hexToRGB("#F4F9FC", 0.76);
 
     // before
     ctx.rect(left, 0, x, height);

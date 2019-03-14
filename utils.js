@@ -109,3 +109,7 @@ function isDotInsideRect(position, rect) {
 
   return xMin <= x && xMax >= x && yMin <= y && yMax >= y;
 }
+
+function isNumeric(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
