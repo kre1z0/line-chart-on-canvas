@@ -19,17 +19,16 @@ class LineChart {
       },
     };
 
+    this.controlBorderWidth = 5;
+    this.startPanelGrabbing = null;
+    this.panelX = 0;
+    this.panelW = 0;
+    this.maxValue = 0;
+    this.lineLengthPreviewCanvas = 0;
     this.lineLength = window.innerWidth / (getDataMaxLength(this.data) / 4);
     this.classNamePrefix = "tgLineChart";
     this.init();
   }
-
-  controlBorderWidth = 5;
-  startPanelGrabbing = null;
-  panelX = 0;
-  panelW = 0;
-  maxValue = 0;
-  lineLengthPreviewCanvas = 0;
 
   init() {
     const { nodes, data, lineLength, offset } = this;

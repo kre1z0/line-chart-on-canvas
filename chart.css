@@ -1,6 +1,6 @@
 .tgLineChart-control {
 	box-sizing: border-box;
-	display: inline-flex;
+	display: inline-block;
 	align-items: center;
 	border: 1px solid #dfe1e3;
 	border-radius: 24px;
@@ -22,13 +22,14 @@
 .tgLineChart-checkmark-icon {
 	position: relative;
 	display: inline-block;
-	width: 0;
-	height: 0;
+	width: 30px;
+	height: 30px;
 	border-radius: 50%;
 	margin-right: 10px;
 	box-sizing: border-box;
 	border: 15px solid;
 	transform-origin: center;
+	transition: 800ms width ease, 800ms height ease;
 }
 
 .tgLineChart-checkmark-icon:before {
@@ -41,7 +42,6 @@
 	border-right: 3px solid #fff;
 	top: calc(50% - 1px);
 	left: 50%;
-	/*transition: 800ms all ease;*/
 	transform: translate(-50%, -50%) rotate(45deg);
 }
 
@@ -53,11 +53,9 @@
 }
 
 .tgLineChart-control input[type=checkbox]:not(:checked) ~ .tgLineChart-checkmark-icon  {
-	transition: 800ms border ease;
 	background-color: transparent !important;
 	border: 2px solid;
-	width: 30px;
-	height: 30px;
+	transition: 800ms border ease;
 }
 
 .tgLineChart-control input[type=checkbox]:not(:checked) ~ .tgLineChart-checkmark-icon:before {
