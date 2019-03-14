@@ -98,9 +98,16 @@ class LineChart {
     backCtx.drawImage(previewCanvas, 0, 0);
 
     this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
-    window.addEventListener("mousemove", this.handleMove.bind(this));
-    window.addEventListener("mousedown", this.handleDown.bind(this));
-    window.addEventListener("mouseup", this.handleUp.bind(this));
+    this.setListeners();
+  }
+
+  setListeners() {
+    document.addEventListener("mousemove", this.handleMove.bind(this));
+    document.addEventListener("touchmove", this.handleMove.bind(this));
+    document.addEventListener("mousedown", this.handleDown.bind(this));
+    document.addEventListener("touchstart", this.handleDown.bind(this));
+    document.addEventListener("mouseup", this.handleUp.bind(this));
+    document.addEventListener("touchend", this.handleUp.bind(this));
   }
 
   clearCanvas(canvas) {
@@ -206,11 +213,18 @@ class LineChart {
   handleUp(e) {
     const { nodes, startPanelGrabbing, panelX } = this;
     const { previewCanvas } = nodes;
+    const { padding } = previewCanvas;
     const { x } = getPosition(e);
+    const { width } = previewCanvas.node.getBoundingClientRect();
 
     if (isNumeric(startPanelGrabbing)) {
       const positionX = x - startPanelGrabbing;
-      this.panelX = panelX + positionX;
+      this.panelX = rateLimit(
+        panelX + positionX,
+        0,
+        width - this.panelW - padding.left - padding.right,
+      );
+
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
     }

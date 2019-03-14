@@ -21,9 +21,16 @@ function hexToRGB(hex, alpha) {
 function getPosition(e) {
   const { left, top } = e.target.getBoundingClientRect();
 
-  return e.type === "touchmove"
-    ? { x: e.touches[0].pageX - left, y: e.touches[0].pageY - top }
-    : { x: e.clientX - left, y: e.clientY - top };
+  if (e.type === "touchmove" || e.type === "touchstart") {
+    return { x: e.touches[0].pageX - left, y: e.touches[0].pageY - top };
+  } else if (e.type === "touchend") {
+    return {
+      x: e.changedTouches[e.changedTouches.length - 1].pageX,
+      y: e.changedTouches[e.changedTouches.length - 1].pageY,
+    };
+  } else {
+    return { x: e.clientX - left, y: e.clientY - top };
+  }
 }
 
 function rateLimit(n, min, max) {
