@@ -1,8 +1,8 @@
 class LineChart {
-  constructor({ root, data }) {
+  constructor({ root, data, offset }) {
     this.data = normalizeData(data);
     this.root = root;
-
+    this.offset = { left: 20, right: 20, ...offset };
     this.nodes = {
       container: {
         node: document.createElement("div"),
@@ -10,20 +10,12 @@ class LineChart {
       canvas: {
         node: document.createElement("canvas"),
         height: 440,
-        padding: {
-          left: 20,
-          right: 20,
-        },
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
         node: document.createElement("canvas"),
         panelCanvas: document.createElement("canvas"),
         height: 54,
-        padding: {
-          left: 20,
-          right: 20,
-        },
       },
     };
 
@@ -40,12 +32,12 @@ class LineChart {
   lineLengthPreviewCanvas = 0;
 
   init() {
-    const { nodes, data, lineLength } = this;
+    const { nodes, data, lineLength, offset } = this;
     const {
       canvas,
-      previewCanvas: { node: previewCanvas, padding, backNode },
+      previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
-    const { left, right } = padding;
+    const { left, right } = offset;
 
     Object.keys(nodes).forEach((key, i, array) => {
       const { node, height, backNode } = nodes[key];
@@ -91,6 +83,7 @@ class LineChart {
           canvas: nodes.previewCanvas,
           lineLength: this.lineLengthPreviewCanvas,
         });
+        this.initControl(item);
       }
     });
 
@@ -99,6 +92,26 @@ class LineChart {
 
     this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
     this.setListeners();
+  }
+
+  initControl({ name, color }) {
+    const { nodes } = this;
+    const { container } = nodes;
+    const label = document.createElement("label");
+    const text = document.createElement("span");
+    text.innerText = `graph ${name}`;
+    const icon = document.createElement("div");
+    icon.classList.add(`${this.classNamePrefix}-checkmark-icon`);
+    icon.style.backgroundColor = color;
+    icon.style.borderColor = color;
+    label.classList.add(`${this.classNamePrefix}-control`);
+    const input = document.createElement("input");
+    label.appendChild(input);
+    label.appendChild(icon);
+    label.appendChild(text);
+    input.setAttribute("type", "checkbox");
+    input.setAttribute("checked", "checked");
+    container.node.appendChild(label);
   }
 
   setListeners() {
@@ -117,9 +130,10 @@ class LineChart {
   }
 
   drawLine({ data, maxValue, canvas, lineLength }) {
+    const { offset } = this;
     const { values, color } = data;
-    const { node, padding } = canvas;
-    const { left = 0 } = padding;
+    const { node } = canvas;
+    const { left } = offset;
 
     const { height } = node.getBoundingClientRect();
     const ctx = node.getContext("2d");
@@ -132,30 +146,28 @@ class LineChart {
       const y = height - (((value * 100) / maxValue) * height) / 100 - 0.5;
 
       ctx.beginPath();
-
+      // ctx.arc(x, y, 44, 0, 4);
       if (i > 0) {
-        ctx.moveTo(prevX, prevY);
+        ctx.moveTo(prevX + 0, prevY);
       }
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.lineTo(x, y);
       ctx.stroke();
+
       prevX = x;
       prevY = y;
     });
   }
 
   getPanelWidthFromLineLength() {
-    const { nodes, data, lineLength } = this;
+    const { nodes, data, lineLength, offset } = this;
+    const { left, right } = offset;
     const { canvas, previewCanvas } = nodes;
 
-    const previewCanvasWidth =
-      previewCanvas.node.getBoundingClientRect().width -
-      previewCanvas.padding.left -
-      previewCanvas.padding.right;
-    const canvasWidth =
-      canvas.node.getBoundingClientRect().width - canvas.padding.left - canvas.padding.right;
+    const previewCanvasWidth = previewCanvas.node.getBoundingClientRect().width - left - right;
+    const canvasWidth = canvas.node.getBoundingClientRect().width - left - right;
     const lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
 
     const panelWidth = (canvasWidth / lineLength) * lineLengthPreviewCanvas;
@@ -164,11 +176,11 @@ class LineChart {
   }
 
   getPanelRect() {
-    const { panelX, panelW, controlBorderWidth, nodes } = this;
+    const { panelX, panelW, controlBorderWidth, nodes, offset } = this;
     const {
-      previewCanvas: { height, padding },
+      previewCanvas: { height },
     } = nodes;
-    const { left, right } = padding;
+    const { left, right } = offset;
 
     return [
       panelX + controlBorderWidth + left,
@@ -179,9 +191,9 @@ class LineChart {
   }
 
   handleMove(e) {
-    const { nodes, startPanelGrabbing, panelW } = this;
+    const { nodes, startPanelGrabbing, panelW, offset } = this;
     const { previewCanvas } = nodes;
-    const { padding } = previewCanvas;
+    const { left, right } = offset;
 
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
@@ -197,11 +209,7 @@ class LineChart {
       const { width } = previewCanvas.node.getBoundingClientRect();
       const { x } = getPosition(e);
       const positionX = x - startPanelGrabbing;
-      const nextX = rateLimit(
-        this.panelX + positionX,
-        0,
-        width - panelW - padding.left - padding.right,
-      );
+      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW - left - right);
 
       this.clearCanvas(previewCanvas.node);
       const ctx = previewCanvas.node.getContext("2d");
@@ -211,19 +219,15 @@ class LineChart {
   }
 
   handleUp(e) {
-    const { nodes, startPanelGrabbing, panelX } = this;
+    const { nodes, startPanelGrabbing, panelX, offset } = this;
     const { previewCanvas } = nodes;
-    const { padding } = previewCanvas;
+    const { left, right } = offset;
     const { x } = getPosition(e);
     const { width } = previewCanvas.node.getBoundingClientRect();
 
     if (isNumeric(startPanelGrabbing)) {
       const positionX = x - startPanelGrabbing;
-      this.panelX = rateLimit(
-        panelX + positionX,
-        0,
-        width - this.panelW - padding.left - padding.right,
-      );
+      this.panelX = rateLimit(panelX + positionX, 0, width - this.panelW - left - right);
 
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
@@ -271,11 +275,11 @@ class LineChart {
   }
 
   fillPreviewCanvas(x, panelWidth) {
-    const { nodes, controlBorderWidth } = this;
+    const { nodes, controlBorderWidth, offset } = this;
     const {
-      previewCanvas: { node: previewCanvas, padding },
+      previewCanvas: { node: previewCanvas },
     } = nodes;
-    const { left, right } = padding;
+    const { left, right } = offset;
 
     const { width, height } = previewCanvas.getBoundingClientRect();
     const ctx = previewCanvas.getContext("2d");
