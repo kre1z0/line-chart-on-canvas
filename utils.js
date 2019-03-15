@@ -88,6 +88,21 @@ function getMaxValue(data) {
   return roundUsing(max, Math.ceil, -maxLength + 2);
 }
 
+function getMaxValueFromTo({ data, from, to }) {
+  let max = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const type = data[i].type;
+    if (type === "line") {
+      const values = data[i].values.slice(from, to);
+      max = Math.max(max, ...values);
+    }
+  }
+
+  const maxLength = Math.ceil(Math.log10(max + 1));
+  return roundUsing(max, Math.ceil, -maxLength + 2);
+}
+
 function getDataMaxLength(data) {
   let max = 0;
 

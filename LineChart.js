@@ -48,8 +48,6 @@ class LineChart {
     } = nodes;
     const { left, right } = offset;
 
-    this.maxValue = getMaxValue(data);
-
     const { width: canvasW } = this.getWithHeigthByRatio({ node: canvas, offset: { left, right } });
     const { width: previewCanvasW } = this.getWithHeigthByRatio({
       node: previewCanvas,
@@ -60,8 +58,10 @@ class LineChart {
     this.panelX = previewCanvasW - this.panelW;
 
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
-    const from = Math.floor(getDataMaxLength(this.data) - canvasW / lineLength);
-    const to = getDataMaxLength(this.data);
+    const from = Math.floor(getDataMaxLength(data) - canvasW / lineLength);
+    const to = getDataMaxLength(data);
+
+    this.maxValue = getMaxValueFromTo({ data, from, to });
 
     data.forEach(item => {
       if (item.type === "line") {
