@@ -112,18 +112,22 @@ class LineChart {
     const { values, color } = data;
     const slicedValues = to ? values.slice(from, to) : values;
     const { left } = offset;
+    const devicePixelRatio = window.devicePixelRatio;
 
     const { width, height } = this.getWithHeigthByRatio({ node: canvas });
 
     const ctx = canvas.getContext("2d");
     const remainder = from && to ? parseInt(width % lineLength) : 0;
-    const calibrator = from !== 0 ? left : 0;
+    const calibrator = from !== 0 ? left * devicePixelRatio : 0;
 
     let prevX = 0;
     let prevY = 0;
 
     for (let i = 0; i < slicedValues.length; i++) {
-      const x = i !== 0 ? lineLength * i + left + remainder : left + lineWidth / 2 - calibrator;
+      const x =
+        i !== 0
+          ? lineLength * i + left * devicePixelRatio + remainder
+          : left * devicePixelRatio + lineWidth / 2 - calibrator;
       const y = height - (((slicedValues[i] * 100) / maxValue) * height) / 100;
       ctx.beginPath();
       if (i > 0) {
@@ -147,7 +151,7 @@ class LineChart {
     }
 
     if (calibrator) {
-      ctx.clearRect(0, 0, left, height);
+      ctx.clearRect(0, 0, left * devicePixelRatio, height);
     }
   }
 
@@ -407,6 +411,7 @@ class LineChart {
       previewCanvas: { node: previewCanvas },
     } = nodes;
     const { left, right } = offset;
+    const devicePixelRatio = window.devicePixelRatio;
 
     const { width, height } = this.getWithHeigthByRatio({
       node: previewCanvas,
@@ -419,19 +424,24 @@ class LineChart {
     ctx.fillStyle = hexToRGB("#F4F9FC", 0.76);
 
     // before
-    ctx.rect(left, 0, x, height);
+    ctx.rect(left * devicePixelRatio, 0, x, height);
     ctx.fill();
 
     ctx.beginPath();
     // after
-    ctx.rect(x + panelWidth + left + 1.5, 0, width - x - panelWidth, height);
+    ctx.rect(x + panelWidth + left * devicePixelRatio, 0, width - x - panelWidth, height);
     ctx.fill();
 
     // center
     ctx.beginPath();
     ctx.lineWidth = controlBorderWidth;
     ctx.strokeStyle = "rgba(0,0,0, 0.14)";
-    ctx.rect(x + left + controlBorderWidth / 2, 0, panelWidth - controlBorderWidth, height);
+    ctx.rect(
+      x + left * devicePixelRatio + controlBorderWidth / 2,
+      0,
+      panelWidth - controlBorderWidth,
+      height,
+    );
     ctx.stroke();
   }
 
