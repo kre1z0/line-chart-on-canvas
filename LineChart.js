@@ -32,14 +32,18 @@ class LineChart {
   }
 
   init() {
+    this.appendNodes();
+    this.redraw();
+    this.setListeners();
+  }
+
+  redraw() {
     const { nodes, data, lineLength, offset } = this;
     const {
       canvas,
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
     const { left, right } = offset;
-
-    this.appendNodes();
 
     this.maxValue = getMaxValue(data);
     const { width: canvasWidth } = canvas.node.getBoundingClientRect();
@@ -73,15 +77,12 @@ class LineChart {
           lineLength: this.lineLengthPreviewCanvas,
           lineWidth: 1.5,
         });
-        this.initControl(item);
       }
     });
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
-
     this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
-    this.setListeners();
   }
 
   drawLine({ data, maxValue, canvas, lineLength, lineWidth, from, to }) {
@@ -160,17 +161,17 @@ class LineChart {
   }
 
   appendNodes() {
-    const { nodes } = this;
+    const { data, nodes } = this;
 
     Object.keys(nodes).forEach((key, i, array) => {
       const { node, height, backNode } = nodes[key];
-
       node.classList.add(`${this.classNamePrefix}-${key}`);
+
       if (i > 0) {
         const { node: container } = nodes[array[0]];
-
         const { width } = container.getBoundingClientRect();
         node.setAttribute("width", width);
+
         if (height) {
           node.setAttribute("height", height);
         }
@@ -185,6 +186,41 @@ class LineChart {
         this.root.appendChild(node);
       }
     });
+
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (item.type === "line") {
+        this.initControl(item);
+      }
+    }
+  }
+
+  handleResize(e) {
+    console.info("--> handleResize ggwp", e);
+    this.resizeNodes();
+    this.redraw();
+  }
+
+  resizeNodes() {
+    const { nodes } = this;
+
+    Object.keys(nodes).forEach((key, i, array) => {
+      const { node, height, backNode } = nodes[key];
+      if (i > 0) {
+        const { node: container } = nodes[array[0]];
+        const { width } = container.getBoundingClientRect();
+        node.setAttribute("width", width);
+
+        if (height) {
+          node.setAttribute("height", height);
+        }
+
+        if (backNode) {
+          backNode.setAttribute("width", width);
+          backNode.setAttribute("height", height);
+        }
+      }
+    });
   }
 
   setListeners() {
@@ -194,6 +230,7 @@ class LineChart {
     document.addEventListener("touchstart", this.handleDown.bind(this));
     document.addEventListener("mouseup", this.handleUp.bind(this));
     document.addEventListener("touchend", this.handleUp.bind(this));
+    window.addEventListener("resize", this.handleResize.bind(this));
   }
 
   clearCanvas(canvas) {
