@@ -33,6 +33,7 @@ class LineChart {
 
   init() {
     this.appendNodes();
+    this.resizeNodes();
     this.redraw();
     this.setListeners();
   }
@@ -164,23 +165,11 @@ class LineChart {
     const { data, nodes } = this;
 
     Object.keys(nodes).forEach((key, i, array) => {
-      const { node, height, backNode } = nodes[key];
+      const { node } = nodes[key];
       node.classList.add(`${this.classNamePrefix}-${key}`);
 
-      if (i > 0) {
+      if (key !== "container") {
         const { node: container } = nodes[array[0]];
-        const { width } = container.getBoundingClientRect();
-        node.setAttribute("width", width);
-
-        if (height) {
-          node.setAttribute("height", height);
-        }
-
-        if (backNode) {
-          backNode.setAttribute("width", width);
-          backNode.setAttribute("height", height);
-        }
-
         container.appendChild(node);
       } else {
         this.root.appendChild(node);
@@ -195,8 +184,7 @@ class LineChart {
     }
   }
 
-  handleResize(e) {
-    console.info("--> handleResize ggwp", e);
+  handleResize() {
     this.resizeNodes();
     this.redraw();
   }
@@ -204,20 +192,36 @@ class LineChart {
   resizeNodes() {
     const { nodes } = this;
 
+    const devicePixelRatio = window.devicePixelRatio;
+    const largePxRatio = devicePixelRatio > 1;
+
     Object.keys(nodes).forEach((key, i, array) => {
       const { node, height, backNode } = nodes[key];
-      if (i > 0) {
+
+      if (key !== "container") {
         const { node: container } = nodes[array[0]];
         const { width } = container.getBoundingClientRect();
-        node.setAttribute("width", width);
 
-        if (height) {
+        if (largePxRatio) {
+          node.setAttribute("width", width * devicePixelRatio);
+          node.setAttribute("height", height * devicePixelRatio);
+          node.style.width = width + "px";
+          node.style.height = height + "px";
+        } else {
+          node.setAttribute("width", width);
           node.setAttribute("height", height);
         }
 
         if (backNode) {
-          backNode.setAttribute("width", width);
-          backNode.setAttribute("height", height);
+          if (largePxRatio) {
+            backNode.setAttribute("width", width * devicePixelRatio);
+            backNode.setAttribute("height", height * devicePixelRatio);
+            backNode.style.width = width + "px";
+            backNode.style.height = height + "px";
+          } else {
+            backNode.setAttribute("width", width);
+            backNode.setAttribute("height", height);
+          }
         }
       }
     });
