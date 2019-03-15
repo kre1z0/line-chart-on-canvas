@@ -25,7 +25,8 @@ class LineChart {
     this.panelW = 0;
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
-    this.lineLength = window.innerWidth / (getDataMaxLength(this.data) / 4);
+    this.lineLength =
+      (window.innerWidth / (getDataMaxLength(this.data) / 4)) * window.devicePixelRatio;
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
     this.init();
@@ -41,20 +42,24 @@ class LineChart {
   redraw() {
     const { nodes, data, lineLength, offset } = this;
     const {
-      canvas,
+      canvas: { node: canvas },
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
     const { left, right } = offset;
 
     this.maxValue = getMaxValue(data);
-    const { width: canvasWidth } = canvas.node.getBoundingClientRect();
-    const previewCanvasWidth = previewCanvas.getBoundingClientRect().width - left - right;
+
+    const { width: canvasW } = this.getWithHeigthByRatio({ node: canvas, offset: { left, right } });
+    const { width: previewCanvasW } = this.getWithHeigthByRatio({
+      node: previewCanvas,
+      offset: { left, right },
+    });
+
     this.panelW = this.getPanelWidthFromLineLength();
-    this.panelX = previewCanvasWidth - this.panelW;
-    this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
-    const from = Math.floor(
-      getDataMaxLength(this.data) - (canvasWidth - left - right) / lineLength,
-    );
+    this.panelX = previewCanvasW - this.panelW;
+
+    this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
+    const from = Math.floor(getDataMaxLength(this.data) - canvasW / lineLength);
     const to = getDataMaxLength(this.data);
 
     data.forEach(item => {
@@ -74,7 +79,7 @@ class LineChart {
         this.drawLine({
           data: item,
           maxValue: this.maxValue,
-          canvas: nodes.previewCanvas,
+          canvas: previewCanvas,
           lineLength: this.lineLengthPreviewCanvas,
           lineWidth: 1.5,
         });
@@ -83,18 +88,33 @@ class LineChart {
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
-    this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
+    this.fillPreviewCanvas(previewCanvasW - this.panelW, this.panelW);
+  }
+
+  getWithHeigthByRatio({ node, offset = {}, ratio }) {
+    const { left = 0, right = 0 } = offset;
+
+    const devicePixelRatio = ratio || window.devicePixelRatio;
+    const largePxRatio = devicePixelRatio > 1;
+    const { width: w, height: h } = node.getBoundingClientRect();
+
+    return {
+      width: largePxRatio
+        ? w * devicePixelRatio - left * devicePixelRatio - right * devicePixelRatio
+        : w - left - right,
+      height: largePxRatio ? h * devicePixelRatio : h,
+    };
   }
 
   drawLine({ data, maxValue, canvas, lineLength, lineWidth, from, to }) {
     const { offset } = this;
     const { values, color } = data;
     const slicedValues = to ? values.slice(from, to) : values;
-    const { node } = canvas;
     const { left } = offset;
 
-    const { width, height } = node.getBoundingClientRect();
-    const ctx = node.getContext("2d");
+    const { width, height } = this.getWithHeigthByRatio({ node: canvas });
+
+    const ctx = canvas.getContext("2d");
     const remainder = from && to ? parseInt(width % lineLength) : 0;
     const calibrator = from !== 0 ? left : 0;
 
@@ -238,7 +258,7 @@ class LineChart {
   }
 
   clearCanvas(canvas) {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = this.getWithHeigthByRatio({ node: canvas });
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, width, height);
   }
@@ -248,8 +268,19 @@ class LineChart {
     const { left, right } = offset;
     const { canvas, previewCanvas } = nodes;
 
-    const previewCanvasWidth = previewCanvas.node.getBoundingClientRect().width - left - right;
-    const canvasWidth = canvas.node.getBoundingClientRect().width - left - right;
+    const { width: canvasWidth } = this.getWithHeigthByRatio({
+      node: canvas.node,
+      offset: { left, right },
+    });
+
+    const { width: previewCanvasWidth } = this.getWithHeigthByRatio({
+      node: previewCanvas.node,
+      offset: {
+        left,
+        right,
+      },
+    });
+
     const lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
 
     const panelWidth = (canvasWidth / lineLength) * lineLengthPreviewCanvas;
@@ -259,10 +290,10 @@ class LineChart {
 
   getPanelRect() {
     const { panelX, panelW, controlBorderWidth, nodes, offset } = this;
-    const {
-      previewCanvas: { height },
-    } = nodes;
+    const { previewCanvas } = nodes;
     const { left, right } = offset;
+
+    const { height } = this.getWithHeigthByRatio({ node: previewCanvas.node });
 
     return [
       panelX + controlBorderWidth + left,
@@ -288,10 +319,17 @@ class LineChart {
         previewCanvas.node.style.cursor = "default";
       }
     } else if (isNumeric(startPanelGrabbing)) {
-      const { width } = previewCanvas.node.getBoundingClientRect();
+      const { width } = this.getWithHeigthByRatio({
+        node: previewCanvas.node,
+        offset: {
+          left,
+          right,
+        },
+      });
+
       const { x } = getPosition(e);
       const positionX = x - startPanelGrabbing;
-      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW - left - right);
+      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW);
 
       this.clearCanvas(previewCanvas.node);
       const ctx = previewCanvas.node.getContext("2d");
@@ -305,11 +343,14 @@ class LineChart {
     const { previewCanvas } = nodes;
     const { left, right } = offset;
     const { x } = getPosition(e);
-    const { width } = previewCanvas.node.getBoundingClientRect();
+    const { width } = this.getWithHeigthByRatio({
+      node: previewCanvas.node,
+      offset: { left, right },
+    });
 
     if (isNumeric(startPanelGrabbing)) {
       const positionX = x - startPanelGrabbing;
-      this.panelX = rateLimit(panelX + positionX, 0, width - this.panelW - left - right);
+      this.panelX = rateLimit(panelX + positionX, 0, width - this.panelW);
 
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
@@ -363,7 +404,11 @@ class LineChart {
     } = nodes;
     const { left, right } = offset;
 
-    const { width, height } = previewCanvas.getBoundingClientRect();
+    const { width, height } = this.getWithHeigthByRatio({
+      node: previewCanvas,
+      offset: { left, right },
+    });
+
     const ctx = previewCanvas.getContext("2d");
 
     ctx.beginPath();
@@ -375,7 +420,7 @@ class LineChart {
 
     ctx.beginPath();
     // after
-    ctx.rect(x + panelWidth + left + 1.5, 0, width - left - right - x - panelWidth, height);
+    ctx.rect(x + panelWidth + left + 1.5, 0, width - x - panelWidth, height);
     ctx.fill();
 
     // center
