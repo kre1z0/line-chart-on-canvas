@@ -18,18 +18,18 @@ function hexToRGB(hex, alpha) {
   }
 }
 
-function getPosition(e) {
+function getPosition(e, ratio = 1) {
   const { left, top } = e.target.getBoundingClientRect();
 
   if (e.type === "touchmove" || e.type === "touchstart") {
-    return { x: e.touches[0].pageX - left, y: e.touches[0].pageY - top };
+    return { x: (e.touches[0].pageX - left) * ratio, y: (e.touches[0].pageY - top) * ratio };
   } else if (e.type === "touchend") {
     return {
-      x: e.changedTouches[e.changedTouches.length - 1].pageX,
-      y: e.changedTouches[e.changedTouches.length - 1].pageY,
+      x: e.changedTouches[e.changedTouches.length - 1].pageX * ratio,
+      y: e.changedTouches[e.changedTouches.length - 1].pageY * ratio,
     };
   } else {
-    return { x: e.clientX - left, y: e.clientY - top };
+    return { x: (e.clientX - left) * ratio, y: (e.clientY - top) * ratio };
   }
 }
 
