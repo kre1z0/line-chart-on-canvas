@@ -42,10 +42,15 @@ class LineChart {
     this.appendNodes();
 
     this.maxValue = getMaxValue(data);
+    const { width: canvasWidth } = canvas.node.getBoundingClientRect();
     const previewCanvasWidth = previewCanvas.getBoundingClientRect().width - left - right;
     this.panelW = this.getPanelWidthFromLineLength();
     this.panelX = previewCanvasWidth - this.panelW;
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
+    const from = Math.floor(
+      getDataMaxLength(this.data) - (canvasWidth - left - right) / lineLength,
+    );
+    const to = getDataMaxLength(this.data);
 
     data.forEach(item => {
       if (item.type === "line") {
@@ -55,7 +60,9 @@ class LineChart {
           maxValue: this.maxValue,
           canvas,
           lineLength,
-          lineWidth: 3,
+          lineWidth: 3.5,
+          from,
+          to,
         });
 
         // preview canvas
@@ -75,6 +82,50 @@ class LineChart {
 
     this.fillPreviewCanvas(previewCanvasWidth - this.panelW, this.panelW);
     this.setListeners();
+  }
+
+  drawLine({ data, maxValue, canvas, lineLength, lineWidth, from, to }) {
+    const { offset } = this;
+    const { values, color } = data;
+    const slicedValues = to ? values.slice(from, to) : values;
+    const { node } = canvas;
+    const { left } = offset;
+
+    const { width, height } = node.getBoundingClientRect();
+    const ctx = node.getContext("2d");
+    const remainder = from && to ? parseInt(width % lineLength) : 0;
+    const calibrator = from !== 0 ? left : 0;
+
+    let prevX = 0;
+    let prevY = 0;
+
+    for (let i = 0; i < slicedValues.length; i++) {
+      const x = i !== 0 ? lineLength * i + left + remainder : left + lineWidth / 2 - calibrator;
+      const y = height - (((slicedValues[i] * 100) / maxValue) * height) / 100;
+      ctx.beginPath();
+      if (i > 0) {
+        ctx.moveTo(prevX, prevY);
+      }
+
+      if (i < 2) {
+        ctx.lineCap = "butt";
+      } else {
+        ctx.lineCap = "round";
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineTo(x, y);
+
+      ctx.stroke();
+
+      prevX = x;
+      prevY = y;
+    }
+
+    if (calibrator) {
+      ctx.clearRect(0, 0, left, height);
+    }
   }
 
   initControl({ name, color }) {
@@ -106,7 +157,6 @@ class LineChart {
     } else {
       this.disabledLines.push(name);
     }
-    console.info("--> onChange ggwp", { isDisabled, name, array: this.disabledLines });
   }
 
   appendNodes() {
@@ -150,39 +200,6 @@ class LineChart {
     const { width, height } = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, width, height);
-  }
-
-  drawLine({ data, maxValue, canvas, lineLength, lineWidth }) {
-    const { offset } = this;
-    const { values, color } = data;
-    const { node } = canvas;
-    const { left } = offset;
-
-    const { height } = node.getBoundingClientRect();
-    const ctx = node.getContext("2d");
-
-    let prevX = 0;
-    let prevY = 0;
-
-    for (let i = 0; i < values.length; i++) {
-      const x = i !== 0 ? lineLength * i + left : left + lineWidth / 2;
-      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
-
-      ctx.beginPath();
-      if (i > 0) {
-        ctx.moveTo(prevX, prevY);
-      }
-
-      ctx.lineCap = "round";
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
-      ctx.lineTo(x, y);
-
-      ctx.stroke();
-
-      prevX = x;
-      prevY = y;
-    }
   }
 
   getPanelWidthFromLineLength() {
