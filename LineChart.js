@@ -31,6 +31,7 @@ class LineChart {
     this.lineLength = (window.innerWidth / (getDataMaxLength(this.data) / 4)) * devicePixelRatio;
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
+    this.ggwpX = 0;
     this.init();
   }
 
@@ -68,6 +69,7 @@ class LineChart {
     const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
     const to = getDataMaxLength(data);
     this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
+    console.info("--> ggwp start 4444 !!!!", { from, to });
 
     const canvasBackNodeWidth = to * lineLength * devicePixelRatio;
     canvasBackNode.setAttribute("width", canvasBackNodeWidth);
@@ -90,7 +92,7 @@ class LineChart {
         // fake canvas
         this.drawLine({
           data: item,
-          maxValue: getMaxValue(data),
+          maxValue: getMaxValueFromTo({ data, from, to }),
           canvas: canvasBackNode,
           lineLength,
           lineWidth: 3.5,
@@ -100,8 +102,8 @@ class LineChart {
       }
     });
 
-    const x = from * lineLength;
-    ctx.drawImage(canvasBackNode, -x, 0);
+    this.ggwpX = from * lineLength;
+    ctx.drawImage(canvasBackNode, -this.ggwpX, 0);
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
@@ -109,22 +111,38 @@ class LineChart {
   }
 
   grabbing(x) {
-    const { nodes, data, lineLength, offset } = this;
+    const { nodes, data, lineLength, offset, maxValue } = this;
     const {
       canvas: { node: canvas, backNode },
+      previewCanvas: { node: previewCanvas },
     } = nodes;
     const { left, right } = offset;
-    const { width } = this.getWithHeigthByRatio({ node: canvas, offset: { left, right } });
-    console.info("--> ggwp 4444", x);
-
+    const { width: previewCanvasW } = this.getWithHeigthByRatio({
+      node: previewCanvas,
+      offset: { left, right },
+    });
     const ctx = canvas.getContext("2d");
+    const devicePixelRatio = window.devicePixelRatio;
+    const lines = getDataMaxLength(data);
+    const canvasBackNodeWidth = lines * lineLength * devicePixelRatio;
+    const ratio = canvasBackNodeWidth / (previewCanvasW + (left * devicePixelRatio) / 2);
+
+    const from = Math.floor((x * ratio) / (lineLength * devicePixelRatio));
+    const to = Math.ceil((x * ratio + this.panelW * ratio) / (lineLength * devicePixelRatio) + 1);
+
+    const nextMaxValue = getMaxValueFromTo({ data, from, to });
+
     this.clearCanvas(canvas);
-    ctx.drawImage(backNode, x, 0);
+
+    if (maxValue !== nextMaxValue) {
+      console.info("--> ggwp 4444", { nextMaxValue, maxValue, from, to });
+    } else {
+    }
+
+    ctx.drawImage(backNode, (-x * ratio) / devicePixelRatio, 0);
     // const from = Math.floor(getDataMaxLength(data) - width / lineLength);
     // const to = getDataMaxLength(data);
-
     // this.maxValue = getMaxValueFromTo({ data, from, to });
-
     // data.forEach(item => {
     //   if (item.type === "line") {
     //     this.drawLine({
