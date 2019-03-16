@@ -12,11 +12,13 @@ class LineChart {
         node: document.createElement("canvas"),
         backNode: document.createElement("canvas"),
         height: 400,
+        lineWidth: 3.5,
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
         node: document.createElement("canvas"),
         height: 54,
+        lineWidth: 1.5,
       },
     };
 
@@ -44,8 +46,8 @@ class LineChart {
   redraw() {
     const { nodes, lineLength, offset, disabledLines } = this;
     const {
-      canvas: { node: canvas, backNode: canvasBackNode },
-      previewCanvas: { node: previewCanvas, backNode },
+      canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
+      previewCanvas: { node: previewCanvas, backNode, lineWidth: previewLineWidth },
     } = nodes;
     const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
@@ -78,7 +80,7 @@ class LineChart {
           maxValue: getMaxValue(data),
           canvas: previewCanvas,
           lineLength: this.lineLengthPreviewCanvas,
-          lineWidth: 1.5,
+          lineWidth: previewLineWidth,
         });
 
         // fake canvas
@@ -87,7 +89,7 @@ class LineChart {
           maxValue: getMaxValueFromTo({ data, from, to }),
           canvas: canvasBackNode,
           lineLength,
-          lineWidth: 3.5,
+          lineWidth: canvasLineWidth,
           width: canvasBackNodeWidth,
           height: canvasH,
         });
@@ -135,7 +137,7 @@ class LineChart {
     const { left, right } = offset;
     const { previewCanvas } = nodes;
     const {
-      canvas: { node: canvas, backNode: canvasBackNode },
+      canvas: { node: canvas, backNode: canvasBackNode, lineWidth },
     } = nodes;
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
@@ -175,7 +177,7 @@ class LineChart {
               maxValue: nextMaxValue,
               canvas: canvasBackNode,
               lineLength,
-              lineWidth: 3.5,
+              lineWidth,
               width: canvasWidth,
               height: canvasH,
             });
@@ -268,7 +270,6 @@ class LineChart {
     } else {
       this.disabledLines.push(name);
     }
-    this.drawByXPosition(panelX);
   }
 
   appendNodes() {
