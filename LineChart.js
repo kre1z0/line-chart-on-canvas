@@ -30,7 +30,7 @@ class LineChart {
     this.panelW = 0;
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
-    this.lineLength = (window.innerWidth / (getDataMaxLength(this.data) / 4)) * devicePixelRatio;
+    this.lineLength = (window.innerWidth / getDataMaxLength(this.data)) * devicePixelRatio * 4;
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
     this.init();
@@ -97,7 +97,6 @@ class LineChart {
 
     const x = from * lineLength;
     ctx.drawImage(canvasBackNode, -x, 0);
-
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
     this.fillPreviewCanvas(previewCanvasW - this.panelW, this.panelW);
