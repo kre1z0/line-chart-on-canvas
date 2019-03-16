@@ -103,7 +103,8 @@ class LineChart {
   }
 
   getGrab(x) {
-    const { nodes, data, lineLength, panelW } = this;
+    const { nodes, lineLength, panelW, disabledLines } = this;
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
@@ -120,42 +121,72 @@ class LineChart {
     return { maxValue, from, to, ratio, canvasWidth };
   }
 
-  drawByXPosition(x) {
-    const { nodes, data, lineLength, maxValue, disabledLines, offset } = this;
+  handleMove(e) {
+    const {
+      data,
+      nodes,
+      startPanelGrabbing,
+      panelW,
+      maxValue,
+      offset,
+      disabledLines,
+      lineLength,
+    } = this;
     const { left, right } = offset;
-
+    const { previewCanvas } = nodes;
     const {
       canvas: { node: canvas, backNode: canvasBackNode },
     } = nodes;
-    const { height: canvasH } = this.getWithHeigthByRatio(canvas);
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
-    const ctx = canvas.getContext("2d");
-    const devicePixelRatio = window.devicePixelRatio;
+    if (startPanelGrabbing === null) {
+      if (move) {
+        previewCanvas.node.style.cursor = "grab";
+      } else if (leftBorder || rightBorder) {
+        previewCanvas.node.style.cursor = "col-resize";
+      } else {
+        previewCanvas.node.style.cursor = "default";
+      }
+    } else if (isNumeric(startPanelGrabbing)) {
+      const { height: canvasH } = this.getWithHeigthByRatio(canvas);
+      const { width } = this.getWithHeigthByRatio(previewCanvas.node);
+      const devicePixelRatio = window.devicePixelRatio;
+      const { x } = getPosition(e, devicePixelRatio);
+      const positionX = x - startPanelGrabbing;
+      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW);
 
-    const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab(x);
+      this.clearCanvas(previewCanvas.node);
+      const ctxPreview = previewCanvas.node.getContext("2d");
+      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+      this.fillPreviewCanvas(nextX, this.panelW);
 
-    this.clearCanvas(canvas);
+      const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab(nextX);
 
-    if (maxValue !== nextMaxValue) {
-      this.maxValue = nextMaxValue;
-      this.clearCanvas(canvasBackNode, canvasWidth + (left + right) * devicePixelRatio, canvasH);
-      const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
-      filteredData.forEach(item => {
-        if (item.type === "line") {
-          this.drawLine({
-            data: item,
-            maxValue: nextMaxValue,
-            canvas: canvasBackNode,
-            lineLength,
-            lineWidth: 3.5,
-            width: canvasWidth,
-            height: canvasH,
-          });
-        }
-      });
+      if (maxValue !== nextMaxValue) {
+        this.maxValue = nextMaxValue;
+        this.clearCanvas(canvasBackNode, canvasWidth + (left + right) * devicePixelRatio, canvasH);
+
+        const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
+
+        filteredData.forEach(item => {
+          if (item.type === "line") {
+            this.drawLine({
+              data: item,
+              maxValue: nextMaxValue,
+              canvas: canvasBackNode,
+              lineLength,
+              lineWidth: 3.5,
+              width: canvasWidth,
+              height: canvasH,
+            });
+          }
+        });
+      }
+
+      const ctx = canvas.getContext("2d");
+      this.clearCanvas(canvas);
+      ctx.drawImage(canvasBackNode, (-nextX * ratio) / devicePixelRatio, 0);
     }
-
-    ctx.drawImage(canvasBackNode, (-x * ratio) / devicePixelRatio, 0);
   }
 
   getWithHeigthByRatio(node, fullWidth) {
@@ -350,34 +381,6 @@ class LineChart {
       panelX + panelW - controlBorderWidth + right,
       height,
     ];
-  }
-
-  handleMove(e) {
-    const { nodes, startPanelGrabbing, panelW } = this;
-    const { previewCanvas } = nodes;
-    const { move, leftBorder, rightBorder } = this.insidePanel(e);
-
-    if (startPanelGrabbing === null) {
-      if (move) {
-        previewCanvas.node.style.cursor = "grab";
-      } else if (leftBorder || rightBorder) {
-        previewCanvas.node.style.cursor = "col-resize";
-      } else {
-        previewCanvas.node.style.cursor = "default";
-      }
-    } else if (isNumeric(startPanelGrabbing)) {
-      const { width } = this.getWithHeigthByRatio(previewCanvas.node);
-      const devicePixelRatio = window.devicePixelRatio;
-      const { x } = getPosition(e, devicePixelRatio);
-      const positionX = x - startPanelGrabbing;
-      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW);
-
-      this.clearCanvas(previewCanvas.node);
-      const ctx = previewCanvas.node.getContext("2d");
-      ctx.drawImage(previewCanvas.backNode, 0, 0);
-      this.fillPreviewCanvas(nextX, this.panelW);
-      this.drawByXPosition(nextX);
-    }
   }
 
   handleUp(e) {
