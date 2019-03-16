@@ -44,22 +44,25 @@ function rateLimit(n, min, max) {
 }
 
 function normalizeData(data) {
-  const { columns, colors, types } = data;
+  const { columns, colors, types, names } = data;
 
   const normalizedData = [];
 
   for (let i = 0; i < columns.length; i++) {
     const name = columns[i][0];
     const values = columns[i].slice(1);
+    const chart = names[name];
 
     const obj = {
       type: types[name],
       values,
       name,
+      chart,
     };
 
     if (name !== "x") {
       const color = colors[name];
+
       normalizedData.push({
         ...obj,
         color,

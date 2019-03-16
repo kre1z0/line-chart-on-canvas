@@ -68,10 +68,8 @@ class LineChart {
     const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
     const to = getDataMaxLength(data);
     this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
-
     const canvasBackNodeWidth = to * lineLength * devicePixelRatio;
     canvasBackNode.setAttribute("width", canvasBackNodeWidth);
-
     const ctx = canvas.getContext("2d");
 
     data.forEach(item => {
@@ -102,16 +100,16 @@ class LineChart {
 
     const x = from * lineLength;
     ctx.drawImage(canvasBackNode, -x, 0);
-
+    this.clearCanvas(backNode, previewCanvasW + left * devicePixelRatio, previewCanvasH);
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
     this.fillPreviewCanvas(previewCanvasW - this.panelW, this.panelW);
   }
 
-  grabbing(x) {
-    const { nodes, data, lineLength, offset, maxValue } = this;
+  drawByXPosition(x) {
+    const { nodes, data, lineLength, offset, maxValue, disabledLines, panelW } = this;
     const {
-      canvas: { node: canvas, backNode },
+      canvas: { node: canvas, backNode: canvasBackNode },
       previewCanvas: { node: previewCanvas },
     } = nodes;
     const { left, right } = offset;
@@ -125,13 +123,13 @@ class LineChart {
     });
 
     const ctx = canvas.getContext("2d");
+
     const devicePixelRatio = window.devicePixelRatio;
     const lines = getDataMaxLength(data);
     const canvasBackNodeWidth = lines * lineLength * devicePixelRatio;
     const ratio = canvasBackNodeWidth / (previewCanvasW + (left * devicePixelRatio) / 2);
-
     const from = Math.floor((x * ratio) / (lineLength * devicePixelRatio));
-    const to = Math.ceil((x * ratio + this.panelW * ratio) / (lineLength * devicePixelRatio) + 1);
+    const to = Math.ceil((x * ratio + panelW * ratio) / (lineLength * devicePixelRatio) + 1);
 
     const nextMaxValue = getMaxValueFromTo({ data, from, to });
 
@@ -139,13 +137,14 @@ class LineChart {
 
     if (maxValue !== nextMaxValue) {
       this.maxValue = nextMaxValue;
-      this.clearCanvas(backNode, canvasBackNodeWidth, canvasH);
-      data.forEach(item => {
+      this.clearCanvas(canvasBackNode, canvasBackNodeWidth, canvasH);
+      const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
+      filteredData.forEach(item => {
         if (item.type === "line") {
           this.drawLine({
             data: item,
             maxValue: nextMaxValue,
-            canvas: backNode,
+            canvas: canvasBackNode,
             lineLength,
             lineWidth: 3.5,
             width: canvasBackNodeWidth,
@@ -155,7 +154,7 @@ class LineChart {
       });
     }
 
-    ctx.drawImage(backNode, (-x * ratio) / devicePixelRatio, 0);
+    ctx.drawImage(canvasBackNode, (-x * ratio) / devicePixelRatio, 0);
   }
 
   getWithHeigthByRatio({ node, offset = {}, ratio }) {
@@ -197,12 +196,6 @@ class LineChart {
         ctx.moveTo(prevX, prevY);
       }
 
-      // if (i < 2) {
-      //   ctx.lineCap = "butt";
-      // } else {
-      //   ctx.lineCap = "round";
-      // }
-
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
       ctx.lineTo(x, y);
@@ -212,18 +205,14 @@ class LineChart {
       prevX = x;
       prevY = y;
     }
-
-    // if (calibrator) {
-    //   ctx.clearRect(0, 0, left * devicePixelRatio, height);
-    // }
   }
 
-  initControl({ name, color }) {
+  initControl({ name, color, chart }) {
     const { nodes } = this;
     const { container } = nodes;
     const label = document.createElement("label");
     const text = document.createElement("span");
-    text.innerText = `graph ${name}`;
+    text.innerText = `graph ${chart}`;
     const icon = document.createElement("div");
     icon.classList.add(`${this.classNamePrefix}-checkmark-icon`);
     icon.style.borderColor = color;
@@ -239,7 +228,7 @@ class LineChart {
   }
 
   onChange(name) {
-    const { disabledLines, nodes } = this;
+    const { disabledLines, nodes, panelX } = this;
     const { canvas, previewCanvas } = nodes;
     const isDisabled = disabledLines.some(item => item === name);
 
@@ -247,10 +236,11 @@ class LineChart {
     this.clearCanvas(previewCanvas.node);
     if (isDisabled) {
       this.disabledLines = disabledLines.filter(item => item !== name);
-      this.redraw();
+
+      this.drawByXPosition(panelX);
     } else {
       this.disabledLines.push(name);
-      this.redraw();
+      this.drawByXPosition(panelX);
     }
   }
 
@@ -408,7 +398,7 @@ class LineChart {
       const ctx = previewCanvas.node.getContext("2d");
       ctx.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(nextX, this.panelW);
-      this.grabbing(nextX);
+      this.drawByXPosition(nextX);
     }
   }
 
