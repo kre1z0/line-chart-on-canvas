@@ -5,6 +5,7 @@ class LineChart {
     this.offset = { left: 20, right: 20, ...offset };
     this.nodes = {
       container: {
+        backNode: document.createElement("div"),
         node: document.createElement("div"),
       },
       canvas: {
@@ -43,15 +44,19 @@ class LineChart {
   redraw() {
     const { nodes, lineLength, offset, disabledLines } = this;
     const {
-      canvas: { node: canvas },
+      canvas: { node: canvas, backNode: canvasBackNode },
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
     const { left, right } = offset;
+    const devicePixelRatio = window.devicePixelRatio;
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
-    const { width: canvasW } = this.getWithHeigthByRatio({ node: canvas, offset: { left, right } });
-    const { width: previewCanvasW } = this.getWithHeigthByRatio({
+    const { width: canvasW, height: canvasH } = this.getWithHeigthByRatio({
+      node: canvas,
+      offset: { left, right },
+    });
+    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio({
       node: previewCanvas,
       offset: { left, right },
     });
@@ -60,66 +65,79 @@ class LineChart {
     this.panelX = previewCanvasW - this.panelW;
 
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
-    const from = Math.floor(getDataMaxLength(data) - canvasW / lineLength);
+    const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
     const to = getDataMaxLength(data);
+    this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
 
-    this.maxValue = getMaxValueFromTo({ data, from, to });
+    const canvasBackNodeWidth = to * lineLength * devicePixelRatio;
+    canvasBackNode.setAttribute("width", canvasBackNodeWidth);
+
+    const ctx = canvas.getContext("2d");
 
     data.forEach(item => {
       if (item.type === "line") {
-        // main canvas
-        this.drawLine({
-          data: item,
-          maxValue: this.maxValue,
-          canvas,
-          lineLength,
-          lineWidth: 3.5,
-          from,
-          to,
-        });
-
         // preview canvas
         this.drawLine({
+          width: canvasW,
+          height: previewCanvasH,
           data: item,
           maxValue: getMaxValue(data),
           canvas: previewCanvas,
           lineLength: this.lineLengthPreviewCanvas,
           lineWidth: 1.5,
         });
+
+        // fake canvas
+        this.drawLine({
+          data: item,
+          maxValue: getMaxValue(data),
+          canvas: canvasBackNode,
+          lineLength,
+          lineWidth: 3.5,
+          width: canvasBackNodeWidth,
+          height: canvasH,
+        });
       }
     });
+
+    const x = from * lineLength;
+    ctx.drawImage(canvasBackNode, -x, 0);
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
     this.fillPreviewCanvas(previewCanvasW - this.panelW, this.panelW);
   }
 
-  grabbing() {
+  grabbing(x) {
     const { nodes, data, lineLength, offset } = this;
     const {
-      canvas: { node: canvas },
+      canvas: { node: canvas, backNode },
     } = nodes;
     const { left, right } = offset;
     const { width } = this.getWithHeigthByRatio({ node: canvas, offset: { left, right } });
+    console.info("--> ggwp 4444", x);
 
-    const from = Math.floor(getDataMaxLength(data) - width / lineLength);
-    const to = getDataMaxLength(data);
+    const ctx = canvas.getContext("2d");
+    this.clearCanvas(canvas);
+    ctx.drawImage(backNode, x, 0);
+    // const from = Math.floor(getDataMaxLength(data) - width / lineLength);
+    // const to = getDataMaxLength(data);
 
-    this.maxValue = getMaxValueFromTo({ data, from, to });
+    // this.maxValue = getMaxValueFromTo({ data, from, to });
 
-    data.forEach(item => {
-      if (item.type === "line") {
-        this.drawLine({
-          data: item,
-          maxValue: this.maxValue,
-          canvas,
-          lineLength,
-          lineWidth: 3.5,
-          from,
-          to,
-        });
-      }
-    });
+    // data.forEach(item => {
+    //   if (item.type === "line") {
+    //     this.drawLine({
+    //       data: item,
+    //       maxValue: this.maxValue,
+    //       canvas,
+    //       lineLength,
+    //       lineWidth: 3.5,
+    //       from,
+    //       to,
+    //     });
+    //   }
+    // });
   }
 
   getWithHeigthByRatio({ node, offset = {}, ratio }) {
@@ -137,38 +155,35 @@ class LineChart {
     };
   }
 
-  drawLine({ data, maxValue, canvas, lineLength, lineWidth, from, to }) {
+  drawLine({ data, maxValue, canvas, width, height, lineLength, lineWidth }) {
     const { offset } = this;
     const { values, color } = data;
-    const slicedValues = to ? values.slice(from, to) : values;
+
     const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
 
-    const { width, height } = this.getWithHeigthByRatio({ node: canvas });
-
     const ctx = canvas.getContext("2d");
-    const remainder = from && to ? parseInt(width % lineLength) : 0;
-    const calibrator = from !== 0 ? left * devicePixelRatio : 0;
 
     let prevX = 0;
     let prevY = 0;
 
-    for (let i = 0; i < slicedValues.length; i++) {
+    for (let i = 0; i < values.length; i++) {
+      ctx.lineCap = "round";
       const x =
         i !== 0
-          ? lineLength * i + left * devicePixelRatio + remainder
-          : left * devicePixelRatio + lineWidth / 2 - calibrator;
-      const y = height - (((slicedValues[i] * 100) / maxValue) * height) / 100 + lineWidth;
+          ? lineLength * i + left * devicePixelRatio - (lineWidth / 2) * devicePixelRatio
+          : left * devicePixelRatio + (lineWidth / 2) * devicePixelRatio;
+      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
       ctx.beginPath();
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
       }
 
-      if (i < 2) {
-        ctx.lineCap = "butt";
-      } else {
-        ctx.lineCap = "round";
-      }
+      // if (i < 2) {
+      //   ctx.lineCap = "butt";
+      // } else {
+      //   ctx.lineCap = "round";
+      // }
 
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
@@ -180,9 +195,9 @@ class LineChart {
       prevY = y;
     }
 
-    if (calibrator) {
-      ctx.clearRect(0, 0, left * devicePixelRatio, height);
-    }
+    // if (calibrator) {
+    //   ctx.clearRect(0, 0, left * devicePixelRatio, height);
+    // }
   }
 
   initControl({ name, color }) {
@@ -375,6 +390,7 @@ class LineChart {
       const ctx = previewCanvas.node.getContext("2d");
       ctx.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(nextX, this.panelW);
+      this.grabbing(nextX);
     }
   }
 
