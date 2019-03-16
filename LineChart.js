@@ -31,7 +31,6 @@ class LineChart {
     this.lineLength = (window.innerWidth / (getDataMaxLength(this.data) / 4)) * devicePixelRatio;
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
-    this.ggwpX = 0;
     this.init();
   }
 
@@ -69,7 +68,6 @@ class LineChart {
     const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
     const to = getDataMaxLength(data);
     this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
-    console.info("--> ggwp start 4444 !!!!", { from, to });
 
     const canvasBackNodeWidth = to * lineLength * devicePixelRatio;
     canvasBackNode.setAttribute("width", canvasBackNodeWidth);
@@ -102,8 +100,8 @@ class LineChart {
       }
     });
 
-    this.ggwpX = from * lineLength;
-    ctx.drawImage(canvasBackNode, -this.ggwpX, 0);
+    const x = from * lineLength;
+    ctx.drawImage(canvasBackNode, -x, 0);
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
@@ -121,6 +119,11 @@ class LineChart {
       node: previewCanvas,
       offset: { left, right },
     });
+    const { height: canvasH } = this.getWithHeigthByRatio({
+      node: canvas,
+      offset: { left, right },
+    });
+
     const ctx = canvas.getContext("2d");
     const devicePixelRatio = window.devicePixelRatio;
     const lines = getDataMaxLength(data);
@@ -135,27 +138,24 @@ class LineChart {
     this.clearCanvas(canvas);
 
     if (maxValue !== nextMaxValue) {
-      console.info("--> ggwp 4444", { nextMaxValue, maxValue, from, to });
-    } else {
+      this.maxValue = nextMaxValue;
+      this.clearCanvas(backNode, canvasBackNodeWidth, canvasH);
+      data.forEach(item => {
+        if (item.type === "line") {
+          this.drawLine({
+            data: item,
+            maxValue: nextMaxValue,
+            canvas: backNode,
+            lineLength,
+            lineWidth: 3.5,
+            width: canvasBackNodeWidth,
+            height: canvasH,
+          });
+        }
+      });
     }
 
     ctx.drawImage(backNode, (-x * ratio) / devicePixelRatio, 0);
-    // const from = Math.floor(getDataMaxLength(data) - width / lineLength);
-    // const to = getDataMaxLength(data);
-    // this.maxValue = getMaxValueFromTo({ data, from, to });
-    // data.forEach(item => {
-    //   if (item.type === "line") {
-    //     this.drawLine({
-    //       data: item,
-    //       maxValue: this.maxValue,
-    //       canvas,
-    //       lineLength,
-    //       lineWidth: 3.5,
-    //       from,
-    //       to,
-    //     });
-    //   }
-    // });
   }
 
   getWithHeigthByRatio({ node, offset = {}, ratio }) {
@@ -330,10 +330,10 @@ class LineChart {
     window.addEventListener("resize", this.handleResize.bind(this));
   }
 
-  clearCanvas(canvas) {
+  clearCanvas(canvas, w, h) {
     const { width, height } = this.getWithHeigthByRatio({ node: canvas });
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, w || width, h || height);
   }
 
   getPanelWidthFromLineLength() {
