@@ -47,19 +47,15 @@ class LineChart {
       canvas: { node: canvas, backNode: canvasBackNode },
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
-    const { left, right } = offset;
+    const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
-    const { width: canvasW, height: canvasH } = this.getWithHeigthByRatio({
-      node: canvas,
-      offset: { left, right },
-    });
-    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio({
-      node: previewCanvas,
-      offset: { left, right },
-    });
+    const { width: canvasW, height: canvasH } = this.getWithHeigthByRatio(canvas);
+    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio(
+      previewCanvas,
+    );
 
     this.panelW = this.getPanelWidthFromLineLength();
     this.panelX = previewCanvasW - this.panelW;
@@ -107,40 +103,31 @@ class LineChart {
   }
 
   getGrab(x) {
-    const { nodes, data, lineLength, offset, panelW } = this;
+    const { nodes, data, lineLength, panelW } = this;
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
-
-    const { left, right } = offset;
-    const { width: previewCanvasW } = this.getWithHeigthByRatio({
-      node: previewCanvas,
-      offset: { left, right },
-    });
+    const { width: previewCanvasW } = this.getWithHeigthByRatio(previewCanvas);
 
     const devicePixelRatio = window.devicePixelRatio;
-    const lines = getDataMaxLength(data);
+    const lines = getDataMaxLength(data) - 1;
     const canvasWidth = lines * lineLength * devicePixelRatio;
-    const ratio = canvasWidth / (previewCanvasW + ((left + right) * devicePixelRatio) / 2);
-    const from = Math.floor((x * ratio) / (lineLength * devicePixelRatio));
-    const to = Math.ceil((x * ratio + panelW * ratio) / (lineLength * devicePixelRatio) + 1);
+    const ratio = canvasWidth / previewCanvasW;
+    const from = Math.floor((x * ratio) / (lineLength * devicePixelRatio)) + 1;
+    const to = Math.ceil((x * ratio + panelW * ratio) / (lineLength * devicePixelRatio));
     const maxValue = getMaxValueFromTo({ data, from, to });
 
     return { maxValue, from, to, ratio, canvasWidth };
   }
 
   drawByXPosition(x) {
-    console.info("--> ggwp getMaxValueByXAxis", this.getGrab(x));
-    const { nodes, data, lineLength, offset, maxValue, disabledLines } = this;
+    const { nodes, data, lineLength, maxValue, disabledLines, offset } = this;
+    const { left, right } = offset;
 
     const {
       canvas: { node: canvas, backNode: canvasBackNode },
     } = nodes;
-    const { left, right } = offset;
-    const { height: canvasH } = this.getWithHeigthByRatio({
-      node: canvas,
-      offset: { left, right },
-    });
+    const { height: canvasH } = this.getWithHeigthByRatio(canvas);
 
     const ctx = canvas.getContext("2d");
     const devicePixelRatio = window.devicePixelRatio;
@@ -151,7 +138,7 @@ class LineChart {
 
     if (maxValue !== nextMaxValue) {
       this.maxValue = nextMaxValue;
-      this.clearCanvas(canvasBackNode, canvasWidth, canvasH);
+      this.clearCanvas(canvasBackNode, canvasWidth + (left + right) * devicePixelRatio, canvasH);
       const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
       filteredData.forEach(item => {
         if (item.type === "line") {
@@ -171,18 +158,15 @@ class LineChart {
     ctx.drawImage(canvasBackNode, (-x * ratio) / devicePixelRatio, 0);
   }
 
-  getWithHeigthByRatio({ node, offset = {}, ratio }) {
-    const { left = 0, right = 0 } = offset;
+  getWithHeigthByRatio(node, fullWidth) {
+    const { left = 0, right = 0 } = fullWidth || this.offset;
 
-    const devicePixelRatio = ratio || window.devicePixelRatio;
-    const largePxRatio = devicePixelRatio > 1;
+    const devicePixelRatio = window.devicePixelRatio;
     const { width: w, height: h } = node.getBoundingClientRect();
 
     return {
-      width: largePxRatio
-        ? w * devicePixelRatio - left * devicePixelRatio - right * devicePixelRatio
-        : w - left - right,
-      height: largePxRatio ? h * devicePixelRatio : h,
+      width: w * devicePixelRatio - left * devicePixelRatio - right * devicePixelRatio,
+      height: h * devicePixelRatio,
     };
   }
 
@@ -333,28 +317,18 @@ class LineChart {
   }
 
   clearCanvas(canvas, w, h) {
-    const { width, height } = this.getWithHeigthByRatio({ node: canvas });
+    const { width, height } = this.getWithHeigthByRatio(canvas, true);
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, w || width, h || height);
   }
 
   getPanelWidthFromLineLength() {
-    const { nodes, data, lineLength, offset } = this;
-    const { left, right } = offset;
+    const { nodes, data, lineLength } = this;
     const { canvas, previewCanvas } = nodes;
 
-    const { width: canvasWidth } = this.getWithHeigthByRatio({
-      node: canvas.node,
-      offset: { left, right },
-    });
+    const { width: canvasWidth } = this.getWithHeigthByRatio(canvas.node);
 
-    const { width: previewCanvasWidth } = this.getWithHeigthByRatio({
-      node: previewCanvas.node,
-      offset: {
-        left,
-        right,
-      },
-    });
+    const { width: previewCanvasWidth } = this.getWithHeigthByRatio(previewCanvas.node);
 
     const lineLengthPreviewCanvas = getLineLength(data, previewCanvasWidth);
 
@@ -368,7 +342,7 @@ class LineChart {
     const { previewCanvas } = nodes;
     const { left, right } = offset;
 
-    const { height } = this.getWithHeigthByRatio({ node: previewCanvas.node });
+    const { height } = this.getWithHeigthByRatio(previewCanvas.node);
 
     return [
       panelX + controlBorderWidth + left,
@@ -379,10 +353,8 @@ class LineChart {
   }
 
   handleMove(e) {
-    const { nodes, startPanelGrabbing, panelW, offset } = this;
+    const { nodes, startPanelGrabbing, panelW } = this;
     const { previewCanvas } = nodes;
-    const { left, right } = offset;
-
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
     if (startPanelGrabbing === null) {
@@ -394,13 +366,7 @@ class LineChart {
         previewCanvas.node.style.cursor = "default";
       }
     } else if (isNumeric(startPanelGrabbing)) {
-      const { width } = this.getWithHeigthByRatio({
-        node: previewCanvas.node,
-        offset: {
-          left,
-          right,
-        },
-      });
+      const { width } = this.getWithHeigthByRatio(previewCanvas.node);
       const devicePixelRatio = window.devicePixelRatio;
       const { x } = getPosition(e, devicePixelRatio);
       const positionX = x - startPanelGrabbing;
@@ -415,15 +381,11 @@ class LineChart {
   }
 
   handleUp(e) {
-    const { nodes, startPanelGrabbing, offset, panelX } = this;
+    const { nodes, startPanelGrabbing, panelX } = this;
     const { previewCanvas } = nodes;
-    const { left, right } = offset;
     const devicePixelRatio = window.devicePixelRatio;
     const { x } = getPosition(e, devicePixelRatio);
-    const { width } = this.getWithHeigthByRatio({
-      node: previewCanvas.node,
-      offset: { left, right },
-    });
+    const { width } = this.getWithHeigthByRatio(previewCanvas.node);
 
     if (isNumeric(startPanelGrabbing)) {
       const positionX = x - startPanelGrabbing;
@@ -481,13 +443,10 @@ class LineChart {
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
-    const { left, right } = offset;
+    const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
 
-    const { width, height } = this.getWithHeigthByRatio({
-      node: previewCanvas,
-      offset: { left, right },
-    });
+    const { width, height } = this.getWithHeigthByRatio(previewCanvas);
 
     const ctx = previewCanvas.getContext("2d");
 
