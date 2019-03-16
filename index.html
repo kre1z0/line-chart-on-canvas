@@ -22,12 +22,12 @@
     <script src="./utils.js"></script>
     <script src="./LineChart.js"></script>
     <script>
-      fetch("./chart_data.json")
+      fetch("./data.json")
         .then(response => response.json())
         .then(res => {
           console.info("--> fetch ggwp", res);
           const root = document.getElementById("root");
-          const data = res[0];
+          const data = res[4];
           // data.columns.forEach(col => col.splice(1, 104));
           let chart = new LineChart({ root, data });
           const select = document.getElementById("select");

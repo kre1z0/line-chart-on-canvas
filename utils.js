@@ -51,21 +51,21 @@ function normalizeData(data) {
   for (let i = 0; i < columns.length; i++) {
     const name = columns[i][0];
     const values = columns[i].slice(1);
-    const chart = names[name];
 
     const obj = {
       type: types[name],
       values,
       name,
-      chart,
     };
 
     if (name !== "x") {
       const color = colors[name];
+      const chart = names[name];
 
       normalizedData.push({
         ...obj,
         color,
+        chart,
         max: Math.max(...values),
       });
     } else {
@@ -88,7 +88,7 @@ function normalizeData(data) {
 function getMaxValue(data) {
   const max = data.reduce((prevMax, { max }) => Math.max(prevMax, max || 0), 0);
   const maxLength = Math.ceil(Math.log10(max + 1));
-  return roundUsing(max, Math.ceil, -maxLength + 2);
+  return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 2));
 }
 
 function getMaxValueFromTo({ data, from, to }) {
@@ -103,7 +103,7 @@ function getMaxValueFromTo({ data, from, to }) {
   }
 
   const maxLength = Math.ceil(Math.log10(max + 1));
-  return roundUsing(max, Math.ceil, -maxLength + 2);
+  return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 2));
 }
 
 function getDataMaxLength(data) {
