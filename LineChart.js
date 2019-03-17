@@ -103,7 +103,7 @@ class LineChart {
     this.fillPreviewCanvas(this.panelX, this.panelW);
   }
 
-  redraw({ panelX, panelW, withPreview = true }) {
+  redraw({ panelX, panelW, from, to, canvasWidth, withPreview = true }) {
     const { disabledLines, nodes, lineLength } = this;
     const {
       canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
@@ -120,12 +120,12 @@ class LineChart {
     );
     const ctx = canvas.getContext("2d");
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
-    const { from, to, canvasWidth } = this.getGrab({ x: panelX, panelWidth: panelW });
 
     data.forEach(item => {
       if (item.type === "line") {
         // preview canvas
         if (withPreview) {
+          console.info("--> ggwp $$$$$$ 444444");
           this.drawLine({
             width: previewCanvasW,
             height: previewCanvasH,
@@ -259,9 +259,13 @@ class LineChart {
   }
 
   onChange(name) {
+    const { panelX, panelW } = this;
+
     this.clearAllCanvases();
     this.onDisabledLine(name);
-    this.redraw({ panelX: this.panelX, panelW: this.panelW });
+
+    const { from, to, canvasWidth } = this.getGrab({ x: panelX, panelWidth: panelW });
+    this.redraw({ panelX, panelW, from, to, canvasWidth });
   }
 
   clearAllCanvases() {
@@ -451,10 +455,9 @@ class LineChart {
       const ctxPreview = previewCanvas.node.getContext("2d");
       ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(pX, pW);
-      const { from, to, lines } = this.getGrab({ x: pX, panelWidth: pW });
 
+      const { from, to, lines, canvasWidth: canvasW } = this.getGrab({ x: pX, panelWidth: pW });
       this.lineLength = canvasWidth / (to - from);
-
       const canvasBackNodeWidth =
         lines * this.lineLength * devicePixelRatio + offset.left + offset.right;
       canvasBackNode.setAttribute("width", canvasBackNodeWidth);
@@ -465,6 +468,9 @@ class LineChart {
         panelW: pW,
         panelX: pX,
         withPreview: false,
+        from,
+        to,
+        canvasWidth: canvasW,
       });
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab

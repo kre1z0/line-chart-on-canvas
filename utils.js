@@ -97,7 +97,7 @@ function getMaxValueFromTo({ data, from, to }) {
   for (let i = 0; i < data.length; i++) {
     const type = data[i].type;
     if (type === "line") {
-      const values = data[i].values.slice(from, to);
+      const values = data[i].values.slice(Math.floor(from), Math.ceil(to));
       max = Math.max(max, ...values);
     }
   }
