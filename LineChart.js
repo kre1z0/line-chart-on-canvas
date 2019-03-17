@@ -125,7 +125,6 @@ class LineChart {
       if (item.type === "line") {
         // preview canvas
         if (withPreview) {
-          console.info("--> ggwp $$$$$$ 444444");
           this.drawLine({
             width: previewCanvasW,
             height: previewCanvasH,
