@@ -391,6 +391,24 @@ class LineChart {
     ];
   }
 
+  resizePanel(x, width) {
+    const { startPanelResize, panelX, panelW } = this;
+    const isRightBorder = startPanelResize > panelX + panelW;
+    const positionX = x - startPanelResize;
+    const opposite = isRightBorder ? positionX + panelW < 0 : panelW - positionX > 0;
+    const rPanelX = positionX + panelW < 0 ? panelX + positionX + panelW : panelX;
+    const lPanelX = panelW - positionX > 0 ? panelX + positionX : panelX + panelW;
+    const panelXPos = isRightBorder ? rPanelX : lPanelX;
+    const pW = isRightBorder ? Math.abs(positionX + panelW) : Math.abs(panelW - positionX);
+
+    const limitWidth = opposite ? pW + rateLimit(panelXPos, 0) : width - rateLimit(panelXPos, 0);
+
+    return {
+      pX: rateLimit(panelXPos, 0),
+      pW: panelXPos > 0 ? rateLimit(pW, 0, limitWidth) : rateLimit(pW + panelXPos, 0, limitWidth),
+    };
+  }
+
   handleMove(e) {
     const {
       data,
@@ -419,20 +437,12 @@ class LineChart {
       previewCanvas.node.style.cursor = "col-resize";
     } else if (isNumeric(startPanelResize)) {
       // panel resize
-      const isRightBorder = startPanelResize > panelX + panelW;
-      const positionX = x - startPanelResize;
-      const rPanelX = positionX + panelW < 0 ? panelX + positionX + panelW : panelX;
-      const lPanelX = panelW - positionX > 0 ? panelX + positionX : panelX + panelW;
-      const panelXPos = isRightBorder ? rPanelX : lPanelX;
-      const pW = isRightBorder ? Math.abs(positionX + panelW) : Math.abs(panelW - positionX);
-      const limitWidth = isRightBorder ? width - panelXPos : width - panelXPos;
+      const { pX, pW } = this.resizePanel(x, width);
 
-      if (panelXPos > 0) {
-        this.clearCanvas(previewCanvas.node);
-        const ctxPreview = previewCanvas.node.getContext("2d");
-        ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
-        this.fillPreviewCanvas(rateLimit(panelXPos, 0), rateLimit(pW, 0, limitWidth));
-      }
+      this.clearCanvas(previewCanvas.node);
+      const ctxPreview = previewCanvas.node.getContext("2d");
+      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+      this.fillPreviewCanvas(pX, pW);
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab
 
@@ -490,6 +500,8 @@ class LineChart {
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
     } else if (isNumeric(startPanelResize)) {
+      console.info("--> ggwp no re 4444", this.resizePanel(x, width));
+
       document.documentElement.style.cursor = "";
       this.startPanelResize = null;
     }
