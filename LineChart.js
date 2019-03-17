@@ -39,70 +39,17 @@ class LineChart {
   init() {
     this.appendNodes();
     this.resizeNodes();
+
+    const { width: previewCanvasW } = this.getWithHeigthByRatio(this.nodes.previewCanvas.node);
+    this.panelW = this.getPanelWidth();
+    this.lineLengthPreviewCanvas = getLineLength(this.data, previewCanvasW);
+    this.panelX = previewCanvasW - this.panelW;
+
     this.draw();
     this.setListeners();
   }
 
   draw() {
-    const { nodes, lineLength, disabledLines, offset } = this;
-
-    const {
-      canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
-      previewCanvas: { node: previewCanvas, backNode, lineWidth: previewLineWidth },
-    } = nodes;
-    const devicePixelRatio = window.devicePixelRatio;
-
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
-
-    const { width: canvasW, height: canvasH } = this.getWithHeigthByRatio(canvas);
-    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio(
-      previewCanvas,
-    );
-    this.panelW = this.getPanelWidth();
-    this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
-    this.panelX = previewCanvasW - this.panelW;
-    const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
-    const to = getDataMaxLength(data);
-    this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
-    const canvasBackNodeWidth =
-      (to - 1) * lineLength * devicePixelRatio + offset.left + offset.right;
-    canvasBackNode.setAttribute("width", canvasBackNodeWidth);
-    const ctx = canvas.getContext("2d");
-
-    data.forEach(item => {
-      if (item.type === "line") {
-        // preview canvas
-        this.drawLine({
-          width: canvasW,
-          height: previewCanvasH,
-          data: item,
-          maxValue: getMaxValue(data),
-          canvas: previewCanvas,
-          lineLength: this.lineLengthPreviewCanvas,
-          lineWidth: previewLineWidth,
-        });
-
-        // fake canvas
-        this.drawLine({
-          data: item,
-          maxValue: getMaxValueFromTo({ data, from, to }),
-          canvas: canvasBackNode,
-          lineLength,
-          lineWidth: canvasLineWidth,
-          width: canvasBackNodeWidth,
-          height: canvasH,
-        });
-      }
-    });
-
-    const x = from * lineLength;
-    ctx.drawImage(canvasBackNode, -x, 0);
-    const backCtx = backNode.getContext("2d");
-    backCtx.drawImage(previewCanvas, 0, 0);
-    this.fillPreviewCanvas(previewCanvasW - this.panelW, this.panelW);
-  }
-
-  redraw() {
     const { panelX, panelW, disabledLines, lineLength, nodes } = this;
     const {
       canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
@@ -112,14 +59,15 @@ class LineChart {
         lineWidth: previewLineWidth,
       },
     } = nodes;
-
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
     const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio(
       previewCanvas,
     );
     const ctx = canvas.getContext("2d");
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { from, to, canvasWidth } = this.getGrab(panelX);
+    this.maxValue = getMaxValueFromTo({ data, from, to });
+    canvasBackNode.setAttribute("width", canvasWidth);
 
     data.forEach(item => {
       if (item.type === "line") {
@@ -137,7 +85,7 @@ class LineChart {
         // fake canvas
         this.drawLine({
           data: item,
-          maxValue: getMaxValueFromTo({ data, from, to }),
+          maxValue: this.maxValue,
           canvas: canvasBackNode,
           lineLength,
           lineWidth: canvasLineWidth,
@@ -312,7 +260,7 @@ class LineChart {
   onChange(name) {
     this.clearAllCanvases();
     this.onDisabledLine(name);
-    this.redraw();
+    this.draw();
   }
 
   clearAllCanvases() {
