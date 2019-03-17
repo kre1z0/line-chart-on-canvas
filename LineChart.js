@@ -421,17 +421,21 @@ class LineChart {
       // panel resize
       const isRightBorder = startPanelResize > panelX + panelW;
       const positionX = x - startPanelResize;
-      const panelXPos = positionX + panelW < 0 ? panelX + positionX + panelW : panelX;
-      const limitWidth = width - panelXPos;
+      const panelXPos = isRightBorder
+        ? positionX + panelW < 0
+          ? panelX + positionX + panelW
+          : panelX
+        : panelW - positionX > 0
+        ? panelX + positionX
+        : panelX + panelW;
+      const pW = isRightBorder ? Math.abs(positionX + panelW) : Math.abs(panelW - positionX);
+      const limitWidth = isRightBorder ? width - panelXPos : width - panelXPos;
 
       if (panelXPos > 0) {
         this.clearCanvas(previewCanvas.node);
         const ctxPreview = previewCanvas.node.getContext("2d");
         ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
-        this.fillPreviewCanvas(
-          rateLimit(panelXPos, 0),
-          rateLimit(Math.abs(positionX + panelW), 0, limitWidth),
-        );
+        this.fillPreviewCanvas(rateLimit(panelXPos, 0), rateLimit(pW, 0, limitWidth));
       }
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab
