@@ -229,7 +229,8 @@ class LineChart {
     ctx.lineWidth = lineWidth;
 
     for (let i = 0; i < sliced.length; i++) {
-      const x = lineLength * (i + fromInt) + (left + lineWidth / 2) * devicePixelRatio;
+      const roundLineCap = i < 1 ? lineWidth / 2 : 0;
+      const x = lineLength * (i + fromInt) + (left + roundLineCap) * devicePixelRatio;
       const y = height - (((sliced[i] * 100) / maxValue) * height) / 100;
 
       if (i > 0) {
