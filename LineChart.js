@@ -214,27 +214,28 @@ class LineChart {
     let prevX = 0;
     let prevY = 0;
 
+    ctx.beginPath();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+
     for (let i = 0; i < values.length; i++) {
-      ctx.lineCap = "round";
       const x =
         i !== 0
           ? lineLength * i + left * devicePixelRatio - (lineWidth / 2) * devicePixelRatio
           : left * devicePixelRatio + (lineWidth / 2) * devicePixelRatio;
       const y = height - (((values[i] * 100) / maxValue) * height) / 100;
-      ctx.beginPath();
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
       }
 
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
       ctx.lineTo(x, y);
-
-      ctx.stroke();
 
       prevX = x;
       prevY = y;
     }
+
+    ctx.stroke();
   }
 
   initControl({ name, color, chart }) {
