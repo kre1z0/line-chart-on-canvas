@@ -26,6 +26,7 @@ class LineChart {
 
     this.controlBorderWidth = 5 * devicePixelRatio;
     this.startPanelGrabbing = null;
+    this.startPanelResize = null;
     this.panelX = 0;
     this.panelW = 0;
     this.maxValue = 0;
@@ -182,64 +183,6 @@ class LineChart {
       ratio,
       canvasWidth: canvasWidth + offset.left + offset.right,
     };
-  }
-
-  handleMove(e) {
-    const { data, nodes, startPanelGrabbing, panelW, maxValue, disabledLines, lineLength } = this;
-    const { previewCanvas } = nodes;
-    const {
-      canvas: { node: canvas, backNode: canvasBackNode, lineWidth },
-    } = nodes;
-    const { move, leftBorder, rightBorder } = this.insidePanel(e);
-
-    if (startPanelGrabbing === null) {
-      if (move) {
-        previewCanvas.node.style.cursor = "grab";
-      } else if (leftBorder || rightBorder) {
-        previewCanvas.node.style.cursor = "col-resize";
-      } else {
-        previewCanvas.node.style.cursor = "default";
-      }
-    } else if (isNumeric(startPanelGrabbing)) {
-      const { height: canvasH } = this.getWithHeigthByRatio(canvas);
-      const { width } = this.getWithHeigthByRatio(previewCanvas.node);
-      const devicePixelRatio = window.devicePixelRatio;
-      const { x } = getPosition(e, devicePixelRatio);
-      const positionX = x - startPanelGrabbing;
-      const nextX = rateLimit(this.panelX + positionX, 0, width - panelW);
-
-      this.clearCanvas(previewCanvas.node);
-      const ctxPreview = previewCanvas.node.getContext("2d");
-      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
-      this.fillPreviewCanvas(nextX, this.panelW);
-
-      const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab(nextX);
-
-      if (maxValue !== nextMaxValue) {
-        this.maxValue = nextMaxValue;
-        this.clearCanvas(canvasBackNode);
-
-        const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
-
-        filteredData.forEach(item => {
-          if (item.type === "line") {
-            this.drawLine({
-              data: item,
-              maxValue: nextMaxValue,
-              canvas: canvasBackNode,
-              lineLength,
-              lineWidth,
-              width: canvasWidth,
-              height: canvasH,
-            });
-          }
-        });
-      }
-
-      const ctx = canvas.getContext("2d");
-      this.clearCanvas(canvas);
-      ctx.drawImage(canvasBackNode, (-nextX * ratio) / devicePixelRatio, 0);
-    }
   }
 
   getWithHeigthByRatio(node) {
@@ -448,8 +391,94 @@ class LineChart {
     ];
   }
 
+  handleMove(e) {
+    const {
+      data,
+      nodes,
+      startPanelGrabbing,
+      panelX,
+      panelW,
+      maxValue,
+      disabledLines,
+      lineLength,
+      startPanelResize,
+    } = this;
+    const { previewCanvas } = nodes;
+    const {
+      canvas: { node: canvas, backNode: canvasBackNode, lineWidth },
+    } = nodes;
+    const { move, leftBorder, rightBorder } = this.insidePanel(e);
+    const isNotAction = startPanelGrabbing === null && startPanelResize === null;
+    const devicePixelRatio = window.devicePixelRatio;
+    const { x } = getPosition(e, devicePixelRatio);
+    const { width } = this.getWithHeigthByRatio(previewCanvas.node);
+
+    if (isNotAction && move) {
+      previewCanvas.node.style.cursor = "grab";
+    } else if (isNotAction && (leftBorder || rightBorder)) {
+      previewCanvas.node.style.cursor = "col-resize";
+    } else if (isNumeric(startPanelResize)) {
+      // panel resize
+      const positionX = x - startPanelResize;
+      const nextPanelWidth = positionX + panelW;
+      const panelXPos = nextPanelWidth < 0 ? panelX + nextPanelWidth : panelX;
+      const limitWidth = width - panelXPos;
+
+      console.info("--> panelXPos ggwp", panelXPos);
+      if (panelXPos > 0) {
+        this.clearCanvas(previewCanvas.node);
+        const ctxPreview = previewCanvas.node.getContext("2d");
+        ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+        this.fillPreviewCanvas(
+          rateLimit(panelXPos, 0),
+          rateLimit(Math.abs(nextPanelWidth), 0, limitWidth),
+        );
+      }
+    } else if (isNumeric(startPanelGrabbing)) {
+      // panel grab
+
+      const { height: canvasH } = this.getWithHeigthByRatio(canvas);
+      const positionX = x - startPanelGrabbing;
+      const nextX = rateLimit(panelX + positionX, 0, width - panelW);
+
+      this.clearCanvas(previewCanvas.node);
+      const ctxPreview = previewCanvas.node.getContext("2d");
+      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+      this.fillPreviewCanvas(nextX, panelW);
+
+      const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab(nextX);
+
+      if (maxValue !== nextMaxValue) {
+        this.maxValue = nextMaxValue;
+        this.clearCanvas(canvasBackNode);
+
+        const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
+
+        filteredData.forEach(item => {
+          if (item.type === "line") {
+            this.drawLine({
+              data: item,
+              maxValue: nextMaxValue,
+              canvas: canvasBackNode,
+              lineLength,
+              lineWidth,
+              width: canvasWidth,
+              height: canvasH,
+            });
+          }
+        });
+      }
+
+      const ctx = canvas.getContext("2d");
+      this.clearCanvas(canvas);
+      ctx.drawImage(canvasBackNode, (-nextX * ratio) / devicePixelRatio, 0);
+    } else if (isNotAction) {
+      previewCanvas.node.style.cursor = "default";
+    }
+  }
+
   handleUp(e) {
-    const { nodes, startPanelGrabbing, panelX } = this;
+    const { nodes, startPanelGrabbing, startPanelResize, panelX } = this;
     const { previewCanvas } = nodes;
     const devicePixelRatio = window.devicePixelRatio;
     const { x } = getPosition(e, devicePixelRatio);
@@ -461,6 +490,9 @@ class LineChart {
 
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
+    } else if (isNumeric(startPanelResize)) {
+      document.documentElement.style.cursor = "";
+      this.startPanelResize = null;
     }
 
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
@@ -485,7 +517,9 @@ class LineChart {
       document.documentElement.style.cursor = "grabbing";
       previewCanvas.node.style.cursor = "grabbing";
     } else if (leftBorder || rightBorder) {
+      this.startPanelResize = x * devicePixelRatio;
       document.documentElement.style.cursor = "col-resize";
+      previewCanvas.node.style.cursor = "col-resize";
     }
   }
 
@@ -496,8 +530,13 @@ class LineChart {
     const panelReact = this.getPanelRect();
     const [xMin, yMin, xMax, yMax] = panelReact;
 
-    const leftBorderRect = [xMin - controlBorderWidth, yMin, xMin + controlBorderWidth, yMax];
-    const rightBorderRect = [xMax, yMin, xMax + controlBorderWidth, yMax];
+    const leftBorderRect = [
+      xMin - controlBorderWidth * devicePixelRatio,
+      yMin,
+      xMin + controlBorderWidth * devicePixelRatio,
+      yMax,
+    ];
+    const rightBorderRect = [xMax, yMin, xMax + controlBorderWidth * devicePixelRatio, yMax];
 
     return {
       leftBorder: isDotInsideRect([x, y], leftBorderRect),
