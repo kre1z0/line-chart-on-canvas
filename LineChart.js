@@ -64,7 +64,7 @@ class LineChart {
     this.panelX = previewCanvasW - this.panelW;
     const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
     const to = getDataMaxLength(data);
-    this.maxValue = getMaxValueFromTo({ data, from: Math.floor(from), to });
+    this.maxValue = getMaxValueFromTo({ data, from, to });
     const canvasBackNodeWidth =
       (to - 1) * lineLength * devicePixelRatio + offset.left + offset.right;
     canvasBackNode.setAttribute("width", canvasBackNodeWidth);
@@ -105,7 +105,7 @@ class LineChart {
     this.fillPreviewCanvas(this.panelX, this.panelW);
   }
 
-  redraw({ panelX, panelW, from, to, canvasWidth, withPreview = true }) {
+  redraw({ panelX, panelW, from = 0, to, canvasWidth, withPreview = true, maxValue }) {
     const { disabledLines, nodes, lineLength } = this;
     const {
       canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
@@ -143,12 +143,14 @@ class LineChart {
         // fake canvas
         this.drawLine({
           data: item,
-          maxValue: getMaxValueFromTo({ data, from, to }),
+          maxValue: maxValue || getMaxValueFromTo({ data, from, to }),
           canvas: canvasBackNode,
           lineLength: lineLength,
           lineWidth: canvasLineWidth,
           width: canvasWidth,
           height: canvasH,
+          from,
+          to,
         });
       }
     }
@@ -206,13 +208,16 @@ class LineChart {
     };
   }
 
-  drawLine({ data, maxValue, canvas, width, height, lineLength, lineWidth }) {
+  drawLine({ data, maxValue, canvas, width, height, lineLength, lineWidth, from = 0, to }) {
     const { offset } = this;
     const { values, color } = data;
 
     const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
+    const fromInt = Math.floor(from);
 
+    const sliced =
+      isNumeric(from) && isNumeric(to) ? values.slice(fromInt, Math.ceil(to + 2)) : values;
     const ctx = canvas.getContext("2d");
 
     let prevX = 0;
@@ -223,12 +228,10 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
 
-    for (let i = 0; i < values.length; i++) {
-      const x =
-        i !== 0
-          ? lineLength * i + left * devicePixelRatio - (lineWidth / 2) * devicePixelRatio
-          : left * devicePixelRatio + (lineWidth / 2) * devicePixelRatio;
-      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
+    for (let i = 0; i < sliced.length; i++) {
+      const x = lineLength * (i + fromInt) + (left + lineWidth / 2) * devicePixelRatio;
+      const y = height - (((sliced[i] * 100) / maxValue) * height) / 100;
+
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
       }
@@ -471,7 +474,6 @@ class LineChart {
       });
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab
-
       const { height: canvasH } = this.getWithHeigthByRatio(canvas);
       const positionX = x - startPanelGrabbing;
       const nextX = rateLimit(panelX + positionX, 0, width - panelW);
@@ -515,11 +517,16 @@ class LineChart {
   }
 
   handleUp(e) {
-    const { nodes, startPanelGrabbing, startPanelResize, panelX } = this;
-    const { previewCanvas } = nodes;
+    const { nodes, startPanelGrabbing, startPanelResize, panelX, disabledLines, lineLength } = this;
+    const { canvas, previewCanvas } = nodes;
+    const { node: canvasNode, lineWidth, backNode: canvasBackNode } = canvas;
+    const { node: previewCanvasNode } = previewCanvas;
+
     const devicePixelRatio = window.devicePixelRatio;
     const { x } = getPosition(e, devicePixelRatio);
-    const { width } = this.getWithHeigthByRatio(previewCanvas.node);
+    const { height: canvasHeight } = this.getWithHeigthByRatio(canvasNode);
+    const { width } = this.getWithHeigthByRatio(previewCanvasNode);
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
     if (isNumeric(startPanelGrabbing)) {
       const positionX = x - startPanelGrabbing;
@@ -532,6 +539,29 @@ class LineChart {
       this.panelX = pX;
       this.panelW = pW;
 
+      this.clearCanvas(canvasBackNode);
+
+      const ctx = canvasNode.getContext("2d");
+      const { canvasWidth, from, to, ratio } = this.getGrab({ x: pX, panelWidth: pW });
+      const maxValue = getMaxValueFromTo({ data, from, to });
+
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        if (item.type === "line") {
+          this.drawLine({
+            data: item,
+            maxValue,
+            canvas: canvasBackNode,
+            lineLength,
+            lineWidth,
+            width: canvasWidth,
+            height: canvasHeight,
+          });
+        }
+      }
+
+      this.clearCanvas(canvasNode);
+      ctx.drawImage(canvasBackNode, (-pX * ratio) / devicePixelRatio, 0);
       document.documentElement.style.cursor = "";
       this.startPanelResize = null;
     }
