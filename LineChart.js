@@ -500,7 +500,9 @@ class LineChart {
       this.startPanelGrabbing = null;
       document.documentElement.style.cursor = "";
     } else if (isNumeric(startPanelResize)) {
-      console.info("--> ggwp no re 4444", this.resizePanel(x, width));
+      const { pX, pW } = this.resizePanel(x, width);
+      this.panelX = pX;
+      this.panelW = pW;
 
       document.documentElement.style.cursor = "";
       this.startPanelResize = null;
