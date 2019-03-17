@@ -103,8 +103,8 @@ class LineChart {
     this.fillPreviewCanvas(this.panelX, this.panelW);
   }
 
-  redraw() {
-    const { panelX, panelW, disabledLines, lineLength, nodes } = this;
+  redraw({ panelX, panelW, withPreview = true }) {
+    const { disabledLines, nodes, lineLength } = this;
     const {
       canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
       previewCanvas: {
@@ -120,27 +120,29 @@ class LineChart {
     );
     const ctx = canvas.getContext("2d");
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
-    const { from, to, canvasWidth } = this.getGrab(panelX);
+    const { from, to, canvasWidth } = this.getGrab({ x: panelX, panelWidth: panelW });
 
     data.forEach(item => {
       if (item.type === "line") {
         // preview canvas
-        this.drawLine({
-          width: previewCanvasW,
-          height: previewCanvasH,
-          data: item,
-          maxValue: getMaxValue(data),
-          canvas: previewCanvas,
-          lineLength: this.lineLengthPreviewCanvas,
-          lineWidth: previewLineWidth,
-        });
+        if (withPreview) {
+          this.drawLine({
+            width: previewCanvasW,
+            height: previewCanvasH,
+            data: item,
+            maxValue: getMaxValue(data),
+            canvas: previewCanvas,
+            lineLength: this.lineLengthPreviewCanvas,
+            lineWidth: previewLineWidth,
+          });
+        }
 
         // fake canvas
         this.drawLine({
           data: item,
           maxValue: getMaxValueFromTo({ data, from, to }),
           canvas: canvasBackNode,
-          lineLength,
+          lineLength: lineLength,
           lineWidth: canvasLineWidth,
           width: canvasWidth,
           height: canvasH,
@@ -150,13 +152,16 @@ class LineChart {
 
     const x = from * lineLength;
     ctx.drawImage(canvasBackNode, -x, 0);
-    const backCtx = previewBackNode.getContext("2d");
-    backCtx.drawImage(previewCanvas, 0, 0);
-    this.fillPreviewCanvas(panelX, panelW);
+
+    if (withPreview) {
+      const backCtx = previewBackNode.getContext("2d");
+      backCtx.drawImage(previewCanvas, 0, 0);
+      this.fillPreviewCanvas(panelX, panelW);
+    }
   }
 
-  getGrab(x) {
-    const { nodes, lineLength, panelW, disabledLines, offset } = this;
+  getGrab({ x, panelWidth }) {
+    const { nodes, lineLength, disabledLines, offset } = this;
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const {
       previewCanvas: { node: previewCanvas },
@@ -170,13 +175,14 @@ class LineChart {
     const ratio = canvasWidth / previewCanvasW;
     const from = (x * ratio) / (lineLength * devicePixelRatio);
     const to = rateLimit(
-      (x * ratio + panelW * ratio) / (lineLength * devicePixelRatio),
+      (x * ratio + panelWidth * ratio) / (lineLength * devicePixelRatio),
       0,
       lines + 1,
     );
     const maxValue = getMaxValueFromTo({ data, from, to });
 
     return {
+      lines,
       maxValue,
       from,
       to,
@@ -255,7 +261,7 @@ class LineChart {
   onChange(name) {
     this.clearAllCanvases();
     this.onDisabledLine(name);
-    this.redraw();
+    this.redraw({ panelX: this.panelX, panelW: this.panelW });
   }
 
   clearAllCanvases() {
@@ -411,7 +417,6 @@ class LineChart {
 
   handleMove(e) {
     const {
-      data,
       nodes,
       startPanelGrabbing,
       panelX,
@@ -420,6 +425,7 @@ class LineChart {
       disabledLines,
       lineLength,
       startPanelResize,
+      offset,
     } = this;
     const { previewCanvas } = nodes;
     const {
@@ -429,7 +435,9 @@ class LineChart {
     const isNotAction = startPanelGrabbing === null && startPanelResize === null;
     const devicePixelRatio = window.devicePixelRatio;
     const { x } = getPosition(e, devicePixelRatio);
+    const { width: canvasWidth } = this.getWithHeigthByRatio(canvas);
     const { width } = this.getWithHeigthByRatio(previewCanvas.node);
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
     if (isNotAction && move) {
       previewCanvas.node.style.cursor = "grab";
@@ -443,6 +451,21 @@ class LineChart {
       const ctxPreview = previewCanvas.node.getContext("2d");
       ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(pX, pW);
+      const { from, to, lines } = this.getGrab({ x: pX, panelWidth: pW });
+
+      this.lineLength = canvasWidth / (to - from);
+
+      const canvasBackNodeWidth =
+        lines * this.lineLength * devicePixelRatio + offset.left + offset.right;
+      canvasBackNode.setAttribute("width", canvasBackNodeWidth);
+
+      this.clearCanvas(canvasBackNode);
+      this.clearCanvas(canvas);
+      this.redraw({
+        panelW: pW,
+        panelX: pX,
+        withPreview: false,
+      });
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab
 
@@ -455,15 +478,16 @@ class LineChart {
       ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(nextX, panelW);
 
-      const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab(nextX);
+      const { maxValue: nextMaxValue, ratio, canvasWidth } = this.getGrab({
+        x: nextX,
+        panelWidth: panelW,
+      });
 
       if (maxValue !== nextMaxValue) {
         this.maxValue = nextMaxValue;
         this.clearCanvas(canvasBackNode);
 
-        const filteredData = data.filter(({ name }) => !disabledLines.some(s => s === name));
-
-        filteredData.forEach(item => {
+        data.forEach(item => {
           if (item.type === "line") {
             this.drawLine({
               data: item,

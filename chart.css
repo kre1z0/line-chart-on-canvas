@@ -1,3 +1,7 @@
+.tgLineChart-container canvas {
+	user-select: none;
+}
+
 .tgLineChart-control {
 	margin: 20px 0 0 0;
 	height: 47px;
