@@ -421,13 +421,9 @@ class LineChart {
       // panel resize
       const isRightBorder = startPanelResize > panelX + panelW;
       const positionX = x - startPanelResize;
-      const panelXPos = isRightBorder
-        ? positionX + panelW < 0
-          ? panelX + positionX + panelW
-          : panelX
-        : panelW - positionX > 0
-        ? panelX + positionX
-        : panelX + panelW;
+      const rPanelX = positionX + panelW < 0 ? panelX + positionX + panelW : panelX;
+      const lPanelX = panelW - positionX > 0 ? panelX + positionX : panelX + panelW;
+      const panelXPos = isRightBorder ? rPanelX : lPanelX;
       const pW = isRightBorder ? Math.abs(positionX + panelW) : Math.abs(panelW - positionX);
       const limitWidth = isRightBorder ? width - panelXPos : width - panelXPos;
 
