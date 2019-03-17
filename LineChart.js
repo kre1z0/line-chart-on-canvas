@@ -70,7 +70,9 @@ class LineChart {
     canvasBackNode.setAttribute("width", canvasBackNodeWidth);
     const ctx = canvas.getContext("2d");
 
-    data.forEach(item => {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+
       if (item.type === "line") {
         // preview canvas
         this.drawLine({
@@ -94,7 +96,7 @@ class LineChart {
           height: canvasH,
         });
       }
-    });
+    }
 
     const x = from * lineLength;
     ctx.drawImage(canvasBackNode, -x, 0);
@@ -121,7 +123,9 @@ class LineChart {
     const ctx = canvas.getContext("2d");
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
-    data.forEach(item => {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+
       if (item.type === "line") {
         // preview canvas
         if (withPreview) {
@@ -147,7 +151,7 @@ class LineChart {
           height: canvasH,
         });
       }
-    });
+    }
 
     const x = from * lineLength;
     ctx.drawImage(canvasBackNode, -x, 0);
@@ -270,13 +274,14 @@ class LineChart {
 
   clearAllCanvases() {
     const { nodes } = this;
-    Object.keys(nodes).forEach(key => {
+
+    for (let key in nodes) {
       const { node, backNode } = nodes[key];
       if (key !== "container") {
         this.clearCanvas(node);
         this.clearCanvas(backNode);
       }
-    });
+    }
   }
 
   onDisabledLine(name) {
@@ -292,17 +297,18 @@ class LineChart {
   appendNodes() {
     const { data, nodes } = this;
 
-    Object.keys(nodes).forEach((key, i, array) => {
+    let container = null;
+
+    for (let key in nodes) {
       const { node } = nodes[key];
       node.classList.add(`${this.classNamePrefix}-${key}`);
-
-      if (key !== "container") {
-        const { node: container } = nodes[array[0]];
+      if (key !== "container" && container) {
         container.appendChild(node);
       } else {
+        container = node;
         this.root.appendChild(node);
       }
-    });
+    }
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
@@ -319,40 +325,31 @@ class LineChart {
 
   resizeNodes() {
     const { nodes } = this;
-
     const devicePixelRatio = window.devicePixelRatio;
-    const largePxRatio = devicePixelRatio > 1;
 
-    Object.keys(nodes).forEach((key, i, array) => {
+    let container = null;
+
+    for (let key in nodes) {
       const { node, height, backNode } = nodes[key];
 
-      if (key !== "container") {
-        const { node: container } = nodes[array[0]];
+      if (key !== "container" && container) {
         const { width } = container.getBoundingClientRect();
 
-        if (largePxRatio) {
-          node.setAttribute("width", width * devicePixelRatio);
-          node.setAttribute("height", height * devicePixelRatio);
-          node.style.width = width + "px";
-          node.style.height = height + "px";
-        } else {
-          node.setAttribute("width", width);
-          node.setAttribute("height", height);
-        }
+        node.style.width = width + "px";
+        node.style.height = height + "px";
+        node.setAttribute("width", width * devicePixelRatio);
+        node.setAttribute("height", height * devicePixelRatio);
 
         if (backNode) {
-          if (largePxRatio) {
-            backNode.setAttribute("width", width * devicePixelRatio);
-            backNode.setAttribute("height", height * devicePixelRatio);
-            backNode.style.width = width + "px";
-            backNode.style.height = height + "px";
-          } else {
-            backNode.setAttribute("width", width);
-            backNode.setAttribute("height", height);
-          }
+          backNode.style.width = width + "px";
+          backNode.style.height = height + "px";
+          backNode.setAttribute("width", width * devicePixelRatio);
+          backNode.setAttribute("height", height * devicePixelRatio);
         }
+      } else {
+        container = node;
       }
-    });
+    }
   }
 
   setListeners() {
@@ -493,7 +490,8 @@ class LineChart {
         this.maxValue = nextMaxValue;
         this.clearCanvas(canvasBackNode);
 
-        data.forEach(item => {
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
           if (item.type === "line") {
             this.drawLine({
               data: item,
@@ -505,7 +503,7 @@ class LineChart {
               height: canvasH,
             });
           }
-        });
+        }
       }
 
       const ctx = canvas.getContext("2d");
