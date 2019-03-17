@@ -419,19 +419,18 @@ class LineChart {
       previewCanvas.node.style.cursor = "col-resize";
     } else if (isNumeric(startPanelResize)) {
       // panel resize
+      const isRightBorder = startPanelResize > panelX + panelW;
       const positionX = x - startPanelResize;
-      const nextPanelWidth = positionX + panelW;
-      const panelXPos = nextPanelWidth < 0 ? panelX + nextPanelWidth : panelX;
+      const panelXPos = positionX + panelW < 0 ? panelX + positionX + panelW : panelX;
       const limitWidth = width - panelXPos;
 
-      console.info("--> panelXPos ggwp", panelXPos);
       if (panelXPos > 0) {
         this.clearCanvas(previewCanvas.node);
         const ctxPreview = previewCanvas.node.getContext("2d");
         ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
         this.fillPreviewCanvas(
           rateLimit(panelXPos, 0),
-          rateLimit(Math.abs(nextPanelWidth), 0, limitWidth),
+          rateLimit(Math.abs(positionX + panelW), 0, limitWidth),
         );
       }
     } else if (isNumeric(startPanelGrabbing)) {
