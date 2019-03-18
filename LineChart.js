@@ -108,16 +108,16 @@ class LineChart {
         });
 
         // preview canvas
-        // if (withPreview) {
-        //   this.drawLine({
-        //     height: previewCanvasH,
-        //     data: item,
-        //     maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
-        //     canvas: previewCanvas,
-        //     lineLength: this.lineLengthPreviewCanvas,
-        //     lineWidth: previewLineWidth,
-        //   });
-        // }
+        if (withPreview) {
+          this.drawLine({
+            height: previewCanvasH,
+            data: item,
+            maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
+            canvas: previewCanvas,
+            lineLength: this.lineLengthPreviewCanvas,
+            lineWidth: previewLineWidth,
+          });
+        }
       }
     }
 
@@ -193,7 +193,6 @@ class LineChart {
     let prevX = 0;
     let prevY = 0;
 
-    ctx.beginPath();
     ctx.lineCap = "round";
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
@@ -212,38 +211,43 @@ class LineChart {
         const items = new Array(Math.ceil(left / lineLength));
 
         if (items.length > 0) {
-          let PREVX = x;
-          let PREVY = y;
+          let extraX = x;
+          let extraY = y;
 
-          const obj = {};
-
+          ctx.beginPath();
           for (let index = 0; index < items.length; index++) {
             const x1 = x - lineLength * (index + 1);
             const y1 = height - (((values[i - (index + 1)] * 100) / maxValue) * height) / 100;
 
-            ctx.lineTo(PREVX, PREVY);
-            ctx.lineTo(x1, y1);
+            if (index === 0) {
+              ctx.lineTo(extraX, extraY);
+            }
 
-            obj[`${index}`] = { x1: PREVX, y1: PREVY, x2: x1, y2: y1 };
-            PREVX = x1;
-            PREVY = y1;
+            ctx.lineTo(x1, y1);
+            extraX = x1;
+            extraY = y1;
           }
 
-          console.info("--> ggwp 4444", obj);
+          ctx.stroke();
         }
+      }
+
+      ctx.beginPath();
+
+      if (startIndex > 0) {
+        ctx.moveTo(prevX, prevY);
       }
 
       ctx.lineTo(rX, rY);
       prevX = rX;
       prevY = rY;
 
+      ctx.stroke();
       startIndex += 1;
       if (Math.ceil(to + 2) < i) {
         break;
       }
     }
-
-    ctx.stroke();
   }
 
   initControl({ name, color, chart }) {
