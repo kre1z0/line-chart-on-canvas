@@ -33,7 +33,8 @@ class LineChart {
     this.panelW = 0;
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
-    this.lineLength = (window.innerWidth / getDataMaxLength(this.data)) * devicePixelRatio * 4;
+    this.lineLength =
+      (window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
     this.init();
@@ -47,76 +48,35 @@ class LineChart {
   }
 
   draw() {
-    const { nodes, lineLength, disabledLines, offset } = this;
-
+    const { nodes, lineLength, disabledLines } = this;
     const {
-      canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
-      previewCanvas: { node: previewCanvas, backNode, lineWidth: previewLineWidth },
+      previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
-    const devicePixelRatio = window.devicePixelRatio;
-
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
-    const { width: canvasW, height: canvasH } = this.getWithHeigthByRatio(canvas);
-    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio(
-      previewCanvas,
-    );
+    const { width: previewCanvasW } = this.getWithHeigthByRatio(previewCanvas);
     this.panelW = this.getPanelWidth();
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
     this.panelX = previewCanvasW - this.panelW;
-    const from = getDataMaxLength(data) - 1 - canvasW / lineLength;
+    const { from } = this.getGrab({ x: this.panelX, panelWidth: this.panelW });
     const to = getDataMaxLength(data);
     this.maxValue = getMaxValueFromTo({ data, from, to });
-    const canvasBackNodeWidth =
-      (to - 1) * lineLength * devicePixelRatio + offset.left + offset.right;
-    canvasBackNode.setAttribute("width", canvasBackNodeWidth);
-    const ctx = canvas.getContext("2d");
+    const axialShift = getAxilShift(lineLength, from);
 
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
-
-      if (item.type === "line") {
-        // preview canvas
-        this.drawLine({
-          width: canvasW,
-          height: previewCanvasH,
-          data: item,
-          maxValue: getMaxValue(data),
-          canvas: previewCanvas,
-          lineLength: this.lineLengthPreviewCanvas,
-          lineWidth: previewLineWidth,
-        });
-
-        // fake canvas
-        this.drawLine({
-          data: item,
-          maxValue: getMaxValueFromTo({ data, from, to }),
-          canvas: canvasBackNode,
-          lineLength,
-          lineWidth: canvasLineWidth,
-          width: canvasBackNodeWidth,
-          height: canvasH,
-        });
-      }
-    }
-
-    const x = from * lineLength;
-    ctx.drawImage(canvasBackNode, -x, 0);
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
-    this.fillPreviewCanvas(this.panelX, this.panelW);
+
+    this.redraw({
+      panelX: this.panelX,
+      panelW: this.panelW,
+      from,
+      to,
+      maxValue: this.maxValue,
+      axialShift,
+    });
   }
 
-  redraw({
-    panelX,
-    panelW,
-    from = 0,
-    to,
-    canvasWidth,
-    withPreview = true,
-    maxValue,
-    axialShift = 0,
-  }) {
+  redraw({ panelX, panelW, from = 0, to, withPreview = true, maxValue, axialShift = 0 }) {
     const { disabledLines, nodes, lineLength } = this;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
@@ -128,9 +88,7 @@ class LineChart {
     } = nodes;
 
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
-    const { width: previewCanvasW, height: previewCanvasH } = this.getWithHeigthByRatio(
-      previewCanvas,
-    );
+    const { height: previewCanvasH } = this.getWithHeigthByRatio(previewCanvas);
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
@@ -138,10 +96,22 @@ class LineChart {
       const item = data[i];
 
       if (item.type === "line") {
+        // main canvas
+        this.drawLine({
+          axialShift,
+          data: item,
+          maxValue: maxValue || getMaxValueFromTo({ data, from, to }),
+          canvas,
+          lineLength: lineLength,
+          lineWidth: canvasLineWidth,
+          height: canvasH,
+          from,
+          to,
+        });
+
         // preview canvas
         if (withPreview) {
           this.drawLine({
-            width: previewCanvasW,
             height: previewCanvasH,
             data: item,
             maxValue: getMaxValue(data),
@@ -150,20 +120,6 @@ class LineChart {
             lineWidth: previewLineWidth,
           });
         }
-
-        // fake canvas
-        this.drawLine({
-          axialShift,
-          data: item,
-          maxValue: maxValue || getMaxValueFromTo({ data, from, to }),
-          canvas,
-          lineLength: lineLength,
-          lineWidth: canvasLineWidth,
-          width: canvasWidth,
-          height: canvasH,
-          from,
-          to,
-        });
       }
     }
 
