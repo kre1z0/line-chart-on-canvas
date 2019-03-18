@@ -107,7 +107,16 @@ class LineChart {
     this.fillPreviewCanvas(this.panelX, this.panelW);
   }
 
-  redraw({ panelX, panelW, from = 0, to, canvasWidth, withPreview = true, maxValue }) {
+  redraw({
+    panelX,
+    panelW,
+    from = 0,
+    to,
+    canvasWidth,
+    withPreview = true,
+    maxValue,
+    axialShift = 0,
+  }) {
     const { disabledLines, nodes, lineLength } = this;
     const {
       canvas: { node: canvas, backNode: canvasBackNode, lineWidth: canvasLineWidth },
@@ -123,6 +132,7 @@ class LineChart {
       previewCanvas,
     );
     const ctx = canvas.getContext("2d");
+
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
     for (let i = 0; i < data.length; i++) {
@@ -144,9 +154,10 @@ class LineChart {
 
         // fake canvas
         this.drawLine({
+          axialShift,
           data: item,
           maxValue: maxValue || getMaxValueFromTo({ data, from, to }),
-          canvas: canvasBackNode,
+          canvas: canvas,
           lineLength: lineLength,
           lineWidth: canvasLineWidth,
           width: canvasWidth,
@@ -158,7 +169,7 @@ class LineChart {
     }
 
     const x = from * lineLength;
-    ctx.drawImage(canvasBackNode, -x, 0);
+    // ctx.drawImage(canvasBackNode, 0, 0);
 
     if (withPreview) {
       const backCtx = previewBackNode.getContext("2d");
@@ -210,13 +221,23 @@ class LineChart {
     };
   }
 
-  drawLine({ data, maxValue, canvas, width, height, lineLength, lineWidth, from = 0, to }) {
+  drawLine({
+    data,
+    maxValue,
+    canvas,
+    height,
+    lineLength,
+    lineWidth,
+    from = 0,
+    to,
+    axialShift = 0,
+  }) {
     const { offset } = this;
     const { values, color } = data;
 
     const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
-    const fromInt = Math.floor(from) - 1;
+    const fromInt = Math.floor(from);
     const ctx = canvas.getContext("2d");
 
     let prevX = 0;
@@ -227,9 +248,11 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
 
+    let fakeIndex = 0;
+
     for (let i = fromInt; i < values.length; i++) {
-      const roundLineCap = i < 1 ? lineWidth / 2 : 0;
-      const x = lineLength * i + (left + roundLineCap) * devicePixelRatio;
+      const roundLineCap = fakeIndex === 0 ? lineWidth / 2 : 0;
+      const x = lineLength * fakeIndex + (left + roundLineCap - axialShift) * devicePixelRatio;
       const y = height - (((values[i] * 100) / maxValue) * height) / 100;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
@@ -238,13 +261,12 @@ class LineChart {
         ctx.moveTo(prevX, prevY);
       }
 
-      if (i >= 0) {
-        ctx.lineTo(rX, rY);
-        prevX = rX;
-        prevY = rY;
-      }
+      ctx.lineTo(rX, rY);
+      prevX = rX;
+      prevY = rY;
 
-      if (Math.floor(to + 2) < i) {
+      fakeIndex += 1;
+      if (Math.ceil(to + 2) < i) {
         break;
       }
     }
@@ -463,10 +485,16 @@ class LineChart {
       ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(pX, pW);
 
-      const { from, to, lines, canvasWidth: canvasW } = this.getGrab({ x: pX, panelWidth: pW });
+      const { from, to, canvasWidth: canvasW } = this.getGrab({ x: pX, panelWidth: pW });
       this.lineLength = canvasWidth / (to - from);
+      const diff = to - from;
+      const axialShift = this.lineLength * (from - Math.floor(from));
+
       const canvasBackNodeWidth =
-        lines * this.lineLength * devicePixelRatio + offset.left + offset.right;
+        diff > 10
+          ? canvasW
+          : (diff * this.lineLength + offset.left + offset.right) * devicePixelRatio;
+
       canvasBackNode.setAttribute("width", canvasBackNodeWidth);
 
       this.clearCanvas(canvasBackNode);
@@ -477,7 +505,7 @@ class LineChart {
         withPreview: false,
         from,
         to,
-        canvasWidth: canvasW,
+        axialShift,
       });
     } else if (isNumeric(startPanelGrabbing)) {
       // panel grab
@@ -554,6 +582,7 @@ class LineChart {
 
       for (let i = 0; i < data.length; i++) {
         const item = data[i];
+
         if (item.type === "line") {
           this.drawLine({
             data: item,
