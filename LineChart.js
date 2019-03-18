@@ -198,11 +198,11 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
 
-    let fakeIndex = 0;
+    let startIndex = 0;
 
     for (let i = fromInt; i < values.length; i++) {
-      const roundLineCap = fakeIndex === 0 ? lineWidth / 2 : 0;
-      const x = lineLength * fakeIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
+      const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
+      const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
       const y = height - (((values[i] * 100) / maxValue) * height) / 100;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
@@ -215,7 +215,7 @@ class LineChart {
       prevX = rX;
       prevY = rY;
 
-      fakeIndex += 1;
+      startIndex += 1;
       if (Math.ceil(to + 2) < i) {
         break;
       }
