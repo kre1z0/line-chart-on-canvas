@@ -66,7 +66,6 @@ function normalizeData(data) {
         ...obj,
         color,
         chart,
-        max: Math.max(...values),
       });
     } else {
       const labels = values.map(v => {
@@ -83,12 +82,6 @@ function normalizeData(data) {
   }
 
   return normalizedData;
-}
-
-function getMaxValue(data) {
-  const max = data.reduce((prevMax, { max }) => Math.max(prevMax, max || 0), 0);
-  const maxLength = Math.ceil(Math.log10(max + 1));
-  return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 2));
 }
 
 function getMaxValueFromTo({ data, from, to }) {
@@ -140,5 +133,5 @@ function isNumeric(n) {
 }
 
 function getAxialShift(lineLength, from) {
-  return lineLength * (from - Math.floor(from))
+  return lineLength * (from - Math.floor(from));
 }

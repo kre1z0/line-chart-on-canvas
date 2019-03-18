@@ -3,6 +3,7 @@
 class LineChart {
   constructor({ root, data, offset }) {
     this.data = normalizeData(data);
+    console.info("--> this data ggwp", this.data);
     this.root = root;
     this.offset = { left: 20, right: 20, ...offset };
     this.nodes = {
@@ -112,7 +113,7 @@ class LineChart {
           this.drawLine({
             height: previewCanvasH,
             data: item,
-            maxValue: getMaxValue(data),
+            maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
             canvas: previewCanvas,
             lineLength: this.lineLengthPreviewCanvas,
             lineWidth: previewLineWidth,
