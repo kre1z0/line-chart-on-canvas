@@ -108,16 +108,16 @@ class LineChart {
         });
 
         // preview canvas
-        if (withPreview) {
-          this.drawLine({
-            height: previewCanvasH,
-            data: item,
-            maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
-            canvas: previewCanvas,
-            lineLength: this.lineLengthPreviewCanvas,
-            lineWidth: previewLineWidth,
-          });
-        }
+        // if (withPreview) {
+        //   this.drawLine({
+        //     height: previewCanvasH,
+        //     data: item,
+        //     maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
+        //     canvas: previewCanvas,
+        //     lineLength: this.lineLengthPreviewCanvas,
+        //     lineWidth: previewLineWidth,
+        //   });
+        // }
       }
     }
 
@@ -202,13 +202,35 @@ class LineChart {
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
+
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
       const y = height - (((values[i] * 100) / maxValue) * height) / 100;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
 
-      if (i > 0) {
-        ctx.moveTo(prevX, prevY);
+      if (startIndex === 0) {
+        const items = new Array(Math.ceil(left / lineLength));
+
+        if (items.length > 0) {
+          let PREVX = x;
+          let PREVY = y;
+
+          const obj = {};
+
+          for (let index = 0; index < items.length; index++) {
+            const x1 = x - lineLength * (index + 1);
+            const y1 = height - (((values[i - (index + 1)] * 100) / maxValue) * height) / 100;
+
+            ctx.lineTo(PREVX, PREVY);
+            ctx.lineTo(x1, y1);
+
+            obj[`${index}`] = { x1: PREVX, y1: PREVY, x2: x1, y2: y1 };
+            PREVX = x1;
+            PREVY = y1;
+          }
+
+          console.info("--> ggwp 4444", obj);
+        }
       }
 
       ctx.lineTo(rX, rY);
