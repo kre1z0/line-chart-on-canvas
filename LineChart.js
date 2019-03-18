@@ -214,10 +214,7 @@ class LineChart {
 
     const { left } = offset;
     const devicePixelRatio = window.devicePixelRatio;
-    const fromInt = Math.floor(from);
-
-    const sliced =
-      isNumeric(from) && isNumeric(to) ? values.slice(fromInt, Math.ceil(to + 2)) : values;
+    const fromInt = Math.floor(from) - 1;
     const ctx = canvas.getContext("2d");
 
     let prevX = 0;
@@ -228,10 +225,10 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
 
-    for (let i = 0; i < sliced.length; i++) {
+    for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = i < 1 ? lineWidth / 2 : 0;
-      const x = lineLength * (i + fromInt) + (left + roundLineCap) * devicePixelRatio;
-      const y = height - (((sliced[i] * 100) / maxValue) * height) / 100;
+      const x = lineLength * i + (left + roundLineCap) * devicePixelRatio;
+      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
 
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
@@ -241,6 +238,10 @@ class LineChart {
 
       prevX = x;
       prevY = y;
+
+      if (Math.floor(to + 2) < i) {
+        break;
+      }
     }
 
     ctx.stroke();
