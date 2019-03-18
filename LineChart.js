@@ -1,3 +1,5 @@
+"use asm";
+
 class LineChart {
   constructor({ root, data, offset }) {
     this.data = data;
@@ -229,15 +231,18 @@ class LineChart {
       const roundLineCap = i < 1 ? lineWidth / 2 : 0;
       const x = lineLength * i + (left + roundLineCap) * devicePixelRatio;
       const y = height - (((values[i] * 100) / maxValue) * height) / 100;
+      const rX = (0.5 + x) | 0;
+      const rY = (0.5 + y) | 0;
 
       if (i > 0) {
         ctx.moveTo(prevX, prevY);
       }
 
-      ctx.lineTo(x, y);
-
-      prevX = x;
-      prevY = y;
+      if (i >= 0) {
+        ctx.lineTo(rX, rY);
+        prevX = rX;
+        prevY = rY;
+      }
 
       if (Math.floor(to + 2) < i) {
         break;
