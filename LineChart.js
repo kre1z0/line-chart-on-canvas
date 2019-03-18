@@ -4,7 +4,7 @@ class LineChart {
   constructor({ root, data, offset }) {
     this.data = data;
     this.root = root;
-    this.offset = { left: 20, right: 20, ...offset };
+    this.offset = { left: 20, right: 20, bottom: 44, ...offset };
     this.nodes = {
       container: {
         node: document.createElement("div"),
@@ -63,7 +63,7 @@ class LineChart {
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
-
+    this.xAxis(this.maxValue);
     this.redraw({
       panelX: this.panelX,
       panelW: this.panelW,
@@ -75,7 +75,8 @@ class LineChart {
   }
 
   redraw({ panelX, panelW, from = 0, to, withPreview = true, maxValue, axialShift = 0 }) {
-    const { disabledLines, nodes, lineLength } = this;
+    const { disabledLines, nodes, lineLength, offset } = this;
+    const { bottom } = offset;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
       previewCanvas: {
@@ -103,6 +104,7 @@ class LineChart {
           lineLength: lineLength,
           lineWidth: canvasLineWidth,
           height: canvasH,
+          bottom,
           from,
           to,
         });
@@ -128,6 +130,35 @@ class LineChart {
     }
   }
 
+  xAxis(maxValue) {
+    const { nodes, offset } = this;
+    const {
+      canvas: { node: canvas },
+    } = nodes;
+    const devicePixelRatio = window.devicePixelRatio;
+    const left = offset.left * devicePixelRatio;
+    const ticks = 6;
+    const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
+    const { width, height } = this.getWithHeigthByRatio(canvas);
+    const h = height - offset.bottom;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+
+    ctx.font = "14px Tahoma serif";
+
+    for (let i = 0; i < yScale.length; i++) {
+      const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
+      ctx.fillStyle = "#9CA1A6";
+      ctx.fillText(yScale[i], left, y - 8);
+      ctx.strokeStyle = "#f4f4f4";
+      ctx.lineWidth = 1;
+      ctx.moveTo(left, y);
+      ctx.lineTo(width, y);
+    }
+
+    ctx.stroke();
+  }
+
   getGrab({ x, panelWidth }) {
     const { nodes, lineLength, disabledLines, offset } = this;
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
@@ -141,7 +172,8 @@ class LineChart {
 
     const canvasWidth = lines * lineLength * devicePixelRatio;
     const ratio = canvasWidth / previewCanvasW;
-    const from = (x * ratio) / (lineLength * devicePixelRatio);
+
+    const from = rateLimit((x * ratio) / (lineLength * devicePixelRatio), 0);
     const to = rateLimit(
       (x * ratio + panelWidth * ratio) / (lineLength * devicePixelRatio),
       0,
@@ -149,11 +181,13 @@ class LineChart {
     );
     const maxValue = getMaxValueFromTo({ data, from, to });
 
+    const limit = to === 0 ? [1, 2] : [lines - 1, 0];
+
     return {
       lines,
       maxValue,
-      from,
-      to,
+      from: rateLimit(from, 0, limit[0]),
+      to: rateLimit(to, limit[1], lines + 1),
       ratio,
       canvasWidth: canvasWidth + offset.left + offset.right,
     };
@@ -181,6 +215,7 @@ class LineChart {
     from = 0,
     to,
     axialShift = 0,
+    bottom = 0,
   }) {
     const { offset } = this;
     const { values, color } = data;
@@ -199,11 +234,13 @@ class LineChart {
 
     let startIndex = 0;
 
+    const h = height - bottom;
+
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
 
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
-      const y = height - (((values[i] * 100) / maxValue) * height) / 100;
+      const y = h - (((values[i] * 100) / maxValue) * h) / 100;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
 
@@ -217,7 +254,7 @@ class LineChart {
           ctx.beginPath();
           for (let index = 0; index < items.length; index++) {
             const x1 = x - lineLength * (index + 1);
-            const y1 = height - (((values[i - (index + 1)] * 100) / maxValue) * height) / 100;
+            const y1 = h - (((values[i - (index + 1)] * 100) / maxValue) * h) / 100;
 
             if (index === 0) {
               ctx.lineTo(extraX, extraY);
@@ -275,10 +312,9 @@ class LineChart {
 
     this.clearAllCanvases();
     this.onDisabledLine(name);
-
-    const { from, to, canvasWidth } = this.getGrab({ x: panelX, panelWidth: panelW });
+    const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
     const axialShift = getAxialShift(this.lineLength, from);
-
+    this.xAxis(maxValue);
     this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift });
   }
 
@@ -460,11 +496,13 @@ class LineChart {
       ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
       this.fillPreviewCanvas(pX, pW);
 
-      const { from, to } = this.getGrab({ x: pX, panelWidth: pW });
+      const { from, to, maxValue } = this.getGrab({ x: pX, panelWidth: pW });
       this.lineLength = canvasWidth / (to - from);
+
       const axialShift = getAxialShift(this.lineLength, from);
 
       this.clearCanvas(canvas);
+      this.xAxis(maxValue);
       this.redraw({
         panelW: pW,
         panelX: pX,
@@ -494,6 +532,7 @@ class LineChart {
 
       const axialShift = getAxialShift(lineLength, from);
       this.clearCanvas(canvas);
+      this.xAxis(nextMaxValue);
       this.redraw({
         panelX: nextX,
         panelW: panelW,

@@ -102,7 +102,7 @@ function getMaxValueFromTo({ data, from, to }) {
   }
 
   const maxLength = Math.ceil(Math.log10(max + 1));
-  return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 2));
+  return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 1));
 }
 
 function getDataMaxLength(data) {
