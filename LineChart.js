@@ -1,6 +1,6 @@
 class LineChart {
   constructor({ root, data, offset }) {
-    this.data = normalizeData(data);
+    this.data = data;
     this.root = root;
     this.offset = { left: 20, right: 20, ...offset };
     this.nodes = {
