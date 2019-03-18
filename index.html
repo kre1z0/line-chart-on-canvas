@@ -29,7 +29,7 @@
           const root = document.getElementById("root");
           const data = res[0];
           // data.columns.forEach(col => col.splice(1, 104));
-          let chart = new LineChart({ root, data: normalizeData(data) });
+          let chart = new LineChart({ root, data });
           const select = document.getElementById("select");
           select.addEventListener("change", e => {
             chart.destroy();
