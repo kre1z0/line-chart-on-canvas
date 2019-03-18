@@ -36,6 +36,7 @@ class LineChart {
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
+    this.labelsIsdrawn = false;
     this.init();
   }
 
@@ -91,6 +92,7 @@ class LineChart {
     const { height: previewCanvasH } = this.getWithHeigthByRatio(previewCanvas);
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
+    const labels = data[0].labels;
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
@@ -108,6 +110,7 @@ class LineChart {
           bottom,
           from,
           to,
+          labels,
         });
 
         // preview canvas
@@ -121,8 +124,6 @@ class LineChart {
             lineWidth: previewLineWidth,
           });
         }
-      } else {
-        this.xAxis({ data: item, from, to, lineLength });
       }
     }
 
@@ -131,39 +132,6 @@ class LineChart {
       backCtx.drawImage(previewCanvas, 0, 0);
       this.fillPreviewCanvas(panelX, panelW);
     }
-  }
-
-  xAxis({ data, from, to, lineLength }) {
-    const {
-      nodes,
-      offset: { left, bottom },
-      devicePixelRatio,
-    } = this;
-    const {
-      canvas: { node: canvas },
-    } = nodes;
-    const { labels } = data;
-    const { height } = this.getWithHeigthByRatio(canvas);
-    const ctx = canvas.getContext("2d");
-
-    ctx.save();
-    const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px Tahoma serif`;
-    ctx.textAlign = "center";
-
-    let startIndex = 0;
-
-    for (let i = Math.floor(from); i < labels.length; i++) {
-      const label = labels[i];
-      const x = lineLength * startIndex + left * devicePixelRatio;
-      ctx.fillText(label, x, height - bottom);
-      console.info("--> x 4444 yAxis", { i, x });
-      startIndex += 1;
-      if (Math.ceil(to + 2) < i) {
-        break;
-      }
-    }
-    ctx.restore();
   }
 
   yAxis(maxValue) {
@@ -249,11 +217,13 @@ class LineChart {
     to,
     axialShift = 0,
     bottom = 0,
+    labels = [],
   }) {
-    const { offset, devicePixelRatio } = this;
+    const { offset, devicePixelRatio, labelsIsdrawn } = this;
     const { values, color } = data;
     const { left } = offset;
     const ctx = canvas.getContext("2d");
+    ctx.save();
 
     let prevX = 0;
     let prevY = 0;
@@ -261,6 +231,9 @@ class LineChart {
     ctx.lineCap = "round";
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
+    const textPx = 14 * devicePixelRatio;
+    ctx.font = `${textPx}px Tahoma serif`;
+    ctx.textAlign = "center";
 
     let startIndex = 0;
 
@@ -268,7 +241,7 @@ class LineChart {
 
     for (let i = Math.floor(from); i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
-
+      const label = labels[i];
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
       const y = h - (((values[i] * 100) / maxValue) * h) / 100;
       const rX = (0.5 + x) | 0;
@@ -299,6 +272,17 @@ class LineChart {
         }
       }
 
+      if (!labelsIsdrawn && label && startIndex % 2 === 0) {
+        console.info("--> ggwp 4444", axialShift > lineLength);
+        // ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        const labelX = lineLength * startIndex + left * devicePixelRatio;
+        ctx.fillText(label, x, h + 24);
+      }
+      // else {
+      //   ctx.fillStyle = "rgba(0, 0, 0, 0)";
+      //   ctx.fillText(label, x, h + 24);
+      // }
+
       ctx.beginPath();
 
       if (startIndex > 0) {
@@ -315,6 +299,8 @@ class LineChart {
         break;
       }
     }
+    this.labelsIsdrawn = true;
+    ctx.restore();
   }
 
   initControl({ name, color, chart }) {
@@ -345,6 +331,7 @@ class LineChart {
     const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
     const axialShift = getAxialShift(this.lineLength, from);
     this.yAxis(maxValue);
+    this.labelsIsdrawn = false;
     this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift });
   }
 
@@ -532,6 +519,7 @@ class LineChart {
 
       this.clearCanvas(canvas);
       this.yAxis(maxValue);
+      this.labelsIsdrawn = false;
       this.redraw({
         panelW: pW,
         panelX: pX,
@@ -562,6 +550,7 @@ class LineChart {
       const axialShift = getAxialShift(lineLength, from);
       this.clearCanvas(canvas);
       this.yAxis(nextMaxValue);
+      this.labelsIsdrawn = false;
       this.redraw({
         panelX: nextX,
         panelW: panelW,
