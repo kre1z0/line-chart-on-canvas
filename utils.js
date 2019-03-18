@@ -139,6 +139,6 @@ function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
-function getAxilShift(lineLength, from) {
+function getAxialShift(lineLength, from) {
   return lineLength * (from - Math.floor(from))
 }
