@@ -138,3 +138,7 @@ function isDotInsideRect(position, rect) {
 function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
+
+function getAxilShift(lineLength, from) {
+  return lineLength * (from - Math.floor(from))
+}

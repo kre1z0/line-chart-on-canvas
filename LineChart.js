@@ -297,7 +297,8 @@ class LineChart {
     this.onDisabledLine(name);
 
     const { from, to, canvasWidth } = this.getGrab({ x: panelX, panelWidth: panelW });
-    this.redraw({ panelX, panelW, from, to, canvasWidth });
+    const axialShift = getAxilShift(this.lineLength, from);
+    this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift: 0 });
   }
 
   clearAllCanvases() {
@@ -484,7 +485,7 @@ class LineChart {
       const { from, to } = this.getGrab({ x: pX, panelWidth: pW });
       this.lineLength = canvasWidth / (to - from);
       const diff = to - from;
-      const axialShift = this.lineLength * (from - Math.floor(from));
+      const axialShift = getAxilShift(this.lineLength, from);
       const canvasBackNodeWidth =
         (diff * this.lineLength + offset.left + offset.right) * devicePixelRatio;
       canvasBackNode.setAttribute("width", canvasBackNodeWidth);
