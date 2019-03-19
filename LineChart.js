@@ -726,6 +726,8 @@ class LineChart {
       }
     }
 
+    selectedData.sort((a, b) => b.value - a.value);
+
     this.selectedItem = selectedData;
     if (selectedData && selectedData.length < 3) {
       return;
