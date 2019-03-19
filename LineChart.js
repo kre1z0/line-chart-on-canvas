@@ -548,6 +548,7 @@ class LineChart {
       this.fillPreviewCanvas(pX, pW);
 
       const { from, to, maxValue } = this.getGrab({ x: pX, panelWidth: pW });
+      this.maxValue = maxValue;
       this.lineLength = canvasWidth / (to - from);
 
       const axialShift = getAxialShift(this.lineLength, from);
@@ -664,16 +665,18 @@ class LineChart {
       },
       selectedItem,
     } = this;
-
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { x } = getPosition(e, devicePixelRatio);
     const { from } = this.getGrab({ x: panelX, panelWidth: panelW });
-    const index = rateLimit(Math.floor((x - left * devicePixelRatio) / lineLength + from), 0);
+    const index = rateLimit(
+      Math.floor((x - left * devicePixelRatio) / lineLength + from),
+      0,
+      getDataMaxLength(data) - 1,
+    );
 
     if (selectedItem !== null && (selectedItem && selectedItem[0] === index)) {
       return;
     }
-
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
     const selectedData = [];
 
@@ -727,7 +730,7 @@ class LineChart {
     const axialShift = getAxialShift(lineLength, from);
     const x = lineLength * (index - Math.floor(from)) + left * devicePixelRatio - axialShift;
 
-    roundRect({ canvas, x, y: 100, w: 144, h: 144, r: 20 });
+    // roundRect({ canvas, x, y: 100, w: 144, h: 144, r: 20 });
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, color, value } = selectedItem[i];
