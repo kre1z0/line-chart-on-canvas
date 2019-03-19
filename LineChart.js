@@ -14,8 +14,10 @@ class LineChart {
       },
       canvas: {
         node: document.createElement("canvas"),
+        backNode: document.createElement("canvas"),
         height: 400,
         lineWidth: 3 * devicePixelRatio,
+        gridLineColor: "#f1f1f1",
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
@@ -143,10 +145,16 @@ class LineChart {
   }
 
   yAxis(maxValue) {
-    const { nodes, offset, devicePixelRatio } = this;
+    const { nodes, offset, devicePixelRatio, disabledLines } = this;
     const {
-      canvas: { node: canvas },
+      canvas: { node: canvas, gridLineColor },
     } = nodes;
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
+
+    if (data.length < 2) {
+      return;
+    }
+
     const left = offset.left * devicePixelRatio;
     const ticks = 6;
     const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
@@ -161,7 +169,7 @@ class LineChart {
       const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
       ctx.fillStyle = "#9CA1A6";
       ctx.fillText(yScale[i], left, y - 8);
-      ctx.strokeStyle = "#f1f1f1";
+      ctx.strokeStyle = gridLineColor;
       ctx.lineWidth = 1 * devicePixelRatio;
       ctx.moveTo(left, y);
       ctx.lineTo(width + left, y);
@@ -457,6 +465,7 @@ class LineChart {
     window.addEventListener("resize", this.handleResize.bind(this));
     canvas.addEventListener("mousemove", this.handleMoveInChart.bind(this));
     canvas.addEventListener("touchmove", this.handleMoveInChart.bind(this));
+    canvas.addEventListener("mouseleave", this.handleLeaveChart.bind(this));
   }
 
   clearCanvas(canvas) {
@@ -661,10 +670,11 @@ class LineChart {
       panelW,
       offset: { left },
       nodes: {
-        canvas: { node: canvas },
+        canvas: { node: canvas, backNode },
       },
       selectedItem,
     } = this;
+
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { x } = getPosition(e, devicePixelRatio);
     const { from } = this.getGrab({ x: panelX, panelWidth: panelW });
@@ -673,9 +683,18 @@ class LineChart {
       0,
       getDataMaxLength(data) - 1,
     );
+    const backCtx = backNode.getContext("2d");
+    const ctx = canvas.getContext("2d");
+
+    if (selectedItem === null) {
+      backCtx.drawImage(canvas, 0, 0);
+    }
 
     if (selectedItem !== null && (selectedItem && selectedItem[0] === index)) {
       return;
+    } else if (selectedItem !== null && (selectedItem && selectedItem[0] !== index)) {
+      this.clearCanvas(canvas);
+      ctx.drawImage(backNode, 0, 0);
     }
 
     const selectedData = [];
@@ -708,13 +727,16 @@ class LineChart {
     }
 
     this.selectedItem = selectedData;
+    if (selectedData && selectedData.length < 3) {
+      return;
+    }
     this.drawTooltip({ index, from });
   }
 
   drawTooltip({ index, from }) {
     const {
       nodes: {
-        canvas: { node: canvas, lineWidth },
+        canvas: { node: canvas, lineWidth, gridLineColor, backNode },
       },
       maxValue,
       selectedItem,
@@ -724,18 +746,25 @@ class LineChart {
     } = this;
     const { height } = this.getWithHeigthByRatio(canvas);
     const ctx = canvas.getContext("2d");
+
     const r = 5 * devicePixelRatio;
     const circleLw = 2 * devicePixelRatio;
     const h = height - bottom * devicePixelRatio;
     const axialShift = getAxialShift(lineLength, from);
     const x = lineLength * (index - Math.floor(from)) + left * devicePixelRatio - axialShift;
+    const blankPaddingX = 15 * devicePixelRatio;
+    const blankPaddingY = 10 * devicePixelRatio;
 
-    // roundRect({ canvas, x, y: 100, w: 144, h: 144, r: 20 });
+    const bw = 100 * devicePixelRatio;
+    const bh = 90 * devicePixelRatio;
 
-    for (let i = 0; i < selectedItem.length; i++) {
+    let blankWidth = blankPaddingX * 2;
+    let textPaddingLeft = blankPaddingX;
+
+    for (let i = 1; i < selectedItem.length; i++) {
       const { type, color, value } = selectedItem[i];
+      const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
       if (type !== "x") {
-        const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, 2 * Math.PI, false);
         ctx.fillStyle = "#fff";
@@ -743,8 +772,72 @@ class LineChart {
         ctx.lineWidth = circleLw;
         ctx.strokeStyle = color;
         ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        const valueFontPx = 18 * devicePixelRatio;
+        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
+        const text = ctx.measureText(value);
+        ctx.fillText(value, x + textPaddingLeft, 148 + blankPaddingY);
+        console.info("--> ggwp 4444", text.height);
+        const nameFontPx = 14 * devicePixelRatio;
+        ctx.font = `normal ${nameFontPx}px Tahoma serif`;
+        const tttt = "ggwp nore 4444";
+        const textBottom = ctx.measureText(tttt);
+        ctx.fillText(tttt, x + textPaddingLeft, 144 + blankPaddingY + 18 * devicePixelRatio);
+        const itemWidth = Math.max(
+          (text.width + 20) * devicePixelRatio,
+          (textBottom.width + 20) * devicePixelRatio,
+        );
+        textPaddingLeft += itemWidth;
+        blankWidth += itemWidth;
+        ctx.stroke();
+      } else {
+        ctx.save();
+        ctx.lineWidth = devicePixelRatio;
+        ctx.strokeStyle = gridLineColor;
+        ctx.shadowColor = gridLineColor;
+        ctx.shadowBlur = 2;
+        ctx.fillStyle = "#fff";
+        roundRect({ canvas, x, y: 100, w: bw, h: bh, r: 6 });
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.beginPath();
+        const textPx = 16 * devicePixelRatio;
+        ctx.font = `bold ${textPx}px Tahoma serif`;
+        ctx.fillStyle = "#262c37";
+        const dateText = ctx.measureText(value);
+        blankWidth += dateText.width;
+        ctx.fillText(value, x + blankPaddingX, 120 + blankPaddingY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.lineWidth = 1 * devicePixelRatio;
+        ctx.strokeStyle = gridLineColor;
+        ctx.moveTo(x, height - bottom * devicePixelRatio);
+        ctx.lineTo(x, 0);
+        ctx.stroke();
       }
     }
+    console.info("--> ggwp 4444 blankWidth", blankWidth);
+  }
+
+  handleLeaveChart() {
+    const {
+      nodes: {
+        canvas: { node: canvas, backNode },
+      },
+    } = this;
+    this.clearCanvas(canvas);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(backNode, 0, 0);
+    this.clearCanvas(backNode);
+    this.selectedItem = null;
+    console.info("--> handleLeaveChart ggwp 4444", this.selectedItem);
   }
 
   insidePanel(e) {

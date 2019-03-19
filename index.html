@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="./chart.css" />
   </head>
   <body>
+    <button class="mode-btn">Switch to night mode</button>
     <header class="header">
       <span>Select a chart</span>
       <select id="select">
@@ -38,11 +39,6 @@
           select.addEventListener("change", e => {
             const value = +e.target.value - 1;
             chart.updateData(normalizeData(res[value]));
-            // chart = new LineChart({
-            //   root,
-            //   data: normalizeData(res[value]),
-            //   header: `<h2>Chart #${value + 1}</h2>`,
-            // });
           });
         });
     </script>
