@@ -274,7 +274,7 @@ class LineChart {
 
       if (!labelsIsDrawn) {
         const fromInt = Math.floor(from);
-        const divider = 4;
+        const divider = 2;
         const remainderFrom = fromInt % divider;
         const remainderIndex = startIndex % divider;
 
@@ -288,13 +288,7 @@ class LineChart {
             ctx.fillText(label, x, h + 24);
           }
         } else if (divider > 2) {
-          if (remainderFrom === 3 && remainderIndex === 0) {
-            ctx.fillText(label, x, h + 24);
-          } else if (remainderFrom === 2 && remainderIndex === 1) {
-            ctx.fillText(label, x, h + 24);
-          } else if (remainderFrom === 1 && remainderIndex === 2) {
-            ctx.fillText(label, x, h + 24);
-          } else if (remainderFrom === 0 && remainderIndex === 3) {
+          if (remainderFrom + remainderIndex === 3) {
             ctx.fillText(label, x, h + 24);
           }
         }
