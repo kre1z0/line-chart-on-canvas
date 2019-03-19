@@ -36,13 +36,13 @@
           });
           const select = document.getElementById("select");
           select.addEventListener("change", e => {
-            chart.destroy();
             const value = +e.target.value - 1;
-            chart = new LineChart({
-              root,
-              data: normalizeData(res[value]),
-              header: `<h2>Chart #${value + 1}</h2>`,
-            });
+            chart.updateData(normalizeData(res[value]));
+            // chart = new LineChart({
+            //   root,
+            //   data: normalizeData(res[value]),
+            //   header: `<h2>Chart #${value + 1}</h2>`,
+            // });
           });
         });
     </script>
