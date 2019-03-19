@@ -761,6 +761,7 @@ class LineChart {
     const bh = 90 * devicePixelRatio;
 
     let blankWidth = blankPaddingX * 2;
+    let blankHeight = blankPaddingY * 2;
     let textPaddingLeft = blankPaddingX;
 
     for (let i = 1; i < selectedItem.length; i++) {
@@ -782,16 +783,19 @@ class LineChart {
         const text = ctx.measureText(value);
         ctx.fillText(value, x + textPaddingLeft, 148 + blankPaddingY);
         const nameFontPx = 14 * devicePixelRatio;
+        blankHeight += valueFontPx + nameFontPx;
         ctx.font = `normal ${nameFontPx}px Tahoma serif`;
         const tttt = "ggwp nore 4444";
         const textBottom = ctx.measureText(tttt);
         ctx.fillText(tttt, x + textPaddingLeft, 144 + blankPaddingY + 18 * devicePixelRatio);
-        const itemWidth = Math.max(
-          (text.width + 20) * devicePixelRatio,
-          (textBottom.width + 20) * devicePixelRatio,
-        );
+        const itemWidth = Math.max(text.width + 20, textBottom.width + 20);
+
+        if (i === 3) {
+          blankWidth = Math.max(itemWidth, blankWidth);
+        } else {
+          blankWidth += itemWidth;
+        }
         textPaddingLeft += itemWidth;
-        blankWidth += itemWidth;
         ctx.stroke();
       } else {
         ctx.save();
@@ -812,6 +816,7 @@ class LineChart {
         ctx.fillStyle = "#262c37";
         const dateText = ctx.measureText(value);
         blankWidth += dateText.width;
+        blankHeight += textPx + 10 * devicePixelRatio;
         ctx.fillText(value, x + blankPaddingX, 120 + blankPaddingY);
         ctx.stroke();
         ctx.restore();
@@ -824,6 +829,10 @@ class LineChart {
         ctx.stroke();
       }
     }
+    console.info("--> ggwp 4444", {
+      blankWidth,
+      blankHeight,
+    });
   }
 
   handleLeaveChart() {
