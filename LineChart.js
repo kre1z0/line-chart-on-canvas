@@ -274,23 +274,14 @@ class LineChart {
 
       if (!labelsIsDrawn) {
         const fromInt = Math.floor(from);
-        const divider = 2;
+        const divider = 5;
         const remainderFrom = fromInt % divider;
         const remainderIndex = startIndex % divider;
 
-        if (divider === 1) {
+        if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
           ctx.fillText(label, x, h + 24);
-        } else if (divider === 2) {
-          if (
-            (fromInt % divider === 0 && startIndex % divider > 0) ||
-            (fromInt % divider > 0 && startIndex % divider === 0)
-          ) {
-            ctx.fillText(label, x, h + 24);
-          }
-        } else if (divider > 2) {
-          if (remainderFrom + remainderIndex === 3) {
-            ctx.fillText(label, x, h + 24);
-          }
+        } else if (divider === 1) {
+          ctx.fillText(label, x, h + 24);
         }
       }
 
