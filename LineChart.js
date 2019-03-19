@@ -2,6 +2,8 @@
 
 class LineChart {
   constructor({ root, data, offset, header }) {
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
     this.data = data;
     this.root = root;
     this.header = header;
@@ -13,17 +15,15 @@ class LineChart {
       canvas: {
         node: document.createElement("canvas"),
         height: 400,
-        lineWidth: 3,
+        lineWidth: 3 * devicePixelRatio,
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
         node: document.createElement("canvas"),
         height: 54,
-        lineWidth: 1,
+        lineWidth: 1 * devicePixelRatio,
       },
     };
-
-    const devicePixelRatio = window.devicePixelRatio || 1;
 
     this.controlBorderWidth = 5 * devicePixelRatio;
     this.startPanelGrabbing = null;
@@ -38,6 +38,7 @@ class LineChart {
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
     this.labelsIsDrawn = false;
+    this.selectedItem = null;
     this.init();
   }
 
@@ -144,7 +145,7 @@ class LineChart {
     const ticks = 6;
     const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
     const { width, height } = this.getWithHeigthByRatio(canvas);
-    const h = height - offset.bottom;
+    const h = height - offset.bottom * devicePixelRatio;
     const ctx = canvas.getContext("2d");
     ctx.beginPath();
     const textPx = 14 * devicePixelRatio;
@@ -154,8 +155,8 @@ class LineChart {
       const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
       ctx.fillStyle = "#9CA1A6";
       ctx.fillText(yScale[i], left, y - 8);
-      ctx.strokeStyle = "#f4f4f4";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#f1f1f1";
+      ctx.lineWidth = 1 * devicePixelRatio;
       ctx.moveTo(left, y);
       ctx.lineTo(width + left, y);
     }
@@ -237,9 +238,9 @@ class LineChart {
     ctx.textAlign = "center";
 
     let startIndex = 0;
-    const h = height - bottom;
+    const h = height - bottom * devicePixelRatio;
 
-    const labelWidth = 120;
+    const labelWidth = 140;
     const fromInt = Math.floor(from);
     const divider = rateLimit(Math.round(labelWidth / lineLength), 1);
 
@@ -289,9 +290,9 @@ class LineChart {
         }
 
         if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
-          ctx.fillText(label, x, h + 24);
+          ctx.fillText(label, x, h + 24 * devicePixelRatio);
         } else if (divider === 1) {
-          ctx.fillText(label, x, h + 24);
+          ctx.fillText(label, x, h + 24 * devicePixelRatio);
         }
         ctx.restore();
       }
@@ -436,6 +437,11 @@ class LineChart {
   }
 
   setListeners() {
+    const {
+      nodes: {
+        canvas: { node: canvas },
+      },
+    } = this;
     document.addEventListener("mousemove", this.handleMove.bind(this));
     document.addEventListener("touchmove", this.handleMove.bind(this));
     document.addEventListener("mousedown", this.handleDown.bind(this));
@@ -443,6 +449,8 @@ class LineChart {
     document.addEventListener("mouseup", this.handleUp.bind(this));
     document.addEventListener("touchend", this.handleUp.bind(this));
     window.addEventListener("resize", this.handleResize.bind(this));
+    canvas.addEventListener("mousemove", this.handleMoveInChart.bind(this));
+    canvas.addEventListener("touchmove", this.handleMoveInChart.bind(this));
   }
 
   clearCanvas(canvas) {
@@ -634,6 +642,87 @@ class LineChart {
       this.startPanelResize = x * devicePixelRatio;
       document.documentElement.style.cursor = "col-resize";
       previewCanvas.node.style.cursor = "col-resize";
+    }
+  }
+
+  handleMoveInChart(e) {
+    const {
+      disabledLines,
+      devicePixelRatio,
+      lineLength,
+      panelX,
+      panelW,
+      offset: { left },
+      nodes: {
+        canvas: { node: canvas },
+      },
+    } = this;
+    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
+    const { x } = getPosition(e, devicePixelRatio);
+    const { from } = this.getGrab({ x: panelX, panelWidth: panelW });
+    const index = rateLimit(Math.floor((x - left * devicePixelRatio) / lineLength + from), 0);
+
+    const selectedData = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const { type, values, color, name } = data[i];
+      const value = values[index];
+
+      if (type !== "x") {
+        selectedData.push({
+          name,
+          color,
+          value,
+        });
+      } else {
+        const datetime = new Date(value);
+        const date = datetime.getDate();
+        const month = datetime.toLocaleString("en-us", {
+          month: "short",
+        });
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const dayName = days[datetime.getDay()];
+        selectedData.push({
+          type,
+          value: `${dayName}, ${month}, ${date}`,
+        });
+      }
+    }
+
+    this.selectedItem = selectedData;
+    this.drawTooltip({ index, from });
+  }
+
+  drawTooltip({ index, from }) {
+    const {
+      nodes: {
+        canvas: { node: canvas, lineWidth },
+      },
+      maxValue,
+      selectedItem,
+      lineLength,
+      devicePixelRatio,
+      offset: { left, bottom },
+    } = this;
+    const { height } = this.getWithHeigthByRatio(canvas);
+    const ctx = canvas.getContext("2d");
+    const r = 5 * devicePixelRatio;
+    const circleLw = 2 * devicePixelRatio;
+    const h = height - bottom * devicePixelRatio;
+    const x = lineLength * (index - Math.floor(from)) + (left - r - circleLw - lineWidth / 2);
+
+    for (let i = 0; i < selectedItem.length; i++) {
+      const { type, color, value } = selectedItem[i];
+      if (type !== "x") {
+        const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI, false);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.lineWidth = circleLw;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+      }
     }
   }
 
