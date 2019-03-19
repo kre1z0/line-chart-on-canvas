@@ -2,8 +2,12 @@ body {
 	margin: 0;
 }
 
+.header {
+	margin-left: 20px;
+}
+
 #select {
-	margin: 20px 0 0 20px;
+	margin: 24px 0 0 20px;
 	width: 44px;
 	height: 24px;
 }

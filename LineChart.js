@@ -239,8 +239,11 @@ class LineChart {
     let startIndex = 0;
     const h = height - bottom;
 
-    for (let i = Math.floor(from); i < values.length; i++) {
-      const label = labels[i];
+    const labelWidth = 120;
+    const fromInt = Math.floor(from);
+    const divider = rateLimit(Math.round(labelWidth / lineLength), 1);
+
+    for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
       const y = h - (((values[i] * 100) / maxValue) * h) / 100;
@@ -273,16 +276,24 @@ class LineChart {
       }
 
       if (!labelsIsDrawn) {
-        const fromInt = Math.floor(from);
-        const divider = 5;
+        const label = labels[i];
         const remainderFrom = fromInt % divider;
         const remainderIndex = startIndex % divider;
+        const lastLabel = startIndex === values.length - fromInt - 1;
+
+        ctx.save();
+        if (lastLabel) {
+          ctx.textAlign = "right";
+        } else if (i === 0) {
+          ctx.textAlign = "left";
+        }
 
         if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
           ctx.fillText(label, x, h + 24);
         } else if (divider === 1) {
           ctx.fillText(label, x, h + 24);
         }
+        ctx.restore();
       }
 
       ctx.beginPath();
