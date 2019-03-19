@@ -1,9 +1,10 @@
 "use asm";
 
 class LineChart {
-  constructor({ root, data, offset }) {
+  constructor({ root, data, offset, header }) {
     this.data = data;
     this.root = root;
+    this.header = header;
     this.offset = { left: 20, right: 20, bottom: 44, ...offset };
     this.nodes = {
       container: {
@@ -36,7 +37,7 @@ class LineChart {
     this.classNamePrefix = "tgLineChart";
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
-    this.labelsIsdrawn = false;
+    this.labelsIsDrawn = false;
     this.init();
   }
 
@@ -156,7 +157,7 @@ class LineChart {
       ctx.strokeStyle = "#f4f4f4";
       ctx.lineWidth = 1;
       ctx.moveTo(left, y);
-      ctx.lineTo(width, y);
+      ctx.lineTo(width + left, y);
     }
 
     ctx.stroke();
@@ -219,7 +220,7 @@ class LineChart {
     bottom = 0,
     labels = [],
   }) {
-    const { offset, devicePixelRatio, labelsIsdrawn } = this;
+    const { offset, devicePixelRatio, labelsIsDrawn } = this;
     const { values, color } = data;
     const { left } = offset;
     const ctx = canvas.getContext("2d");
@@ -236,12 +237,11 @@ class LineChart {
     ctx.textAlign = "center";
 
     let startIndex = 0;
-
     const h = height - bottom;
 
     for (let i = Math.floor(from); i < values.length; i++) {
-      const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
       const label = labels[i];
+      const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
       const y = h - (((values[i] * 100) / maxValue) * h) / 100;
       const rX = (0.5 + x) | 0;
@@ -272,16 +272,33 @@ class LineChart {
         }
       }
 
-      if (!labelsIsdrawn && label && startIndex % 2 === 0) {
-        console.info("--> ggwp 4444", axialShift > lineLength);
-        // ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        const labelX = lineLength * startIndex + left * devicePixelRatio;
-        ctx.fillText(label, x, h + 24);
+      if (!labelsIsDrawn) {
+        const fromInt = Math.floor(from);
+        const divider = 4;
+        const remainderFrom = fromInt % divider;
+        const remainderIndex = startIndex % divider;
+
+        if (divider === 1) {
+          ctx.fillText(label, x, h + 24);
+        } else if (divider === 2) {
+          if (
+            (fromInt % divider === 0 && startIndex % divider > 0) ||
+            (fromInt % divider > 0 && startIndex % divider === 0)
+          ) {
+            ctx.fillText(label, x, h + 24);
+          }
+        } else if (divider > 2) {
+          if (remainderFrom === 3 && remainderIndex === 0) {
+            ctx.fillText(label, x, h + 24);
+          } else if (remainderFrom === 2 && remainderIndex === 1) {
+            ctx.fillText(label, x, h + 24);
+          } else if (remainderFrom === 1 && remainderIndex === 2) {
+            ctx.fillText(label, x, h + 24);
+          } else if (remainderFrom === 0 && remainderIndex === 3) {
+            ctx.fillText(label, x, h + 24);
+          }
+        }
       }
-      // else {
-      //   ctx.fillStyle = "rgba(0, 0, 0, 0)";
-      //   ctx.fillText(label, x, h + 24);
-      // }
 
       ctx.beginPath();
 
@@ -299,7 +316,8 @@ class LineChart {
         break;
       }
     }
-    this.labelsIsdrawn = true;
+
+    this.labelsIsDrawn = true;
     ctx.restore();
   }
 
@@ -331,7 +349,7 @@ class LineChart {
     const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
     const axialShift = getAxialShift(this.lineLength, from);
     this.yAxis(maxValue);
-    this.labelsIsdrawn = false;
+    this.labelsIsDrawn = false;
     this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift });
   }
 
@@ -358,7 +376,7 @@ class LineChart {
   }
 
   appendNodes() {
-    const { data, nodes } = this;
+    const { data, nodes, header } = this;
 
     let container = null;
 
@@ -370,6 +388,12 @@ class LineChart {
       } else {
         container = node;
         this.root.appendChild(node);
+        if (header) {
+          const node = document.createElement("div");
+          node.innerHTML = header;
+          node.classList.add(`${this.classNamePrefix}-header`);
+          container.appendChild(node);
+        }
       }
     }
 
@@ -383,6 +407,7 @@ class LineChart {
 
   handleResize() {
     this.resizeNodes();
+    this.labelsIsDrawn = false;
     this.draw();
   }
 
@@ -519,7 +544,7 @@ class LineChart {
 
       this.clearCanvas(canvas);
       this.yAxis(maxValue);
-      this.labelsIsdrawn = false;
+      this.labelsIsDrawn = false;
       this.redraw({
         panelW: pW,
         panelX: pX,
@@ -550,7 +575,7 @@ class LineChart {
       const axialShift = getAxialShift(lineLength, from);
       this.clearCanvas(canvas);
       this.yAxis(nextMaxValue);
-      this.labelsIsdrawn = false;
+      this.labelsIsDrawn = false;
       this.redraw({
         panelX: nextX,
         panelW: panelW,
