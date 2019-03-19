@@ -779,7 +779,6 @@ class LineChart {
         ctx.font = `bold ${valueFontPx}px Tahoma serif`;
         const text = ctx.measureText(value);
         ctx.fillText(value, x + textPaddingLeft, 148 + blankPaddingY);
-        console.info("--> ggwp 4444", text.height);
         const nameFontPx = 14 * devicePixelRatio;
         ctx.font = `normal ${nameFontPx}px Tahoma serif`;
         const tttt = "ggwp nore 4444";
@@ -823,7 +822,6 @@ class LineChart {
         ctx.stroke();
       }
     }
-    console.info("--> ggwp 4444 blankWidth", blankWidth);
   }
 
   handleLeaveChart() {
@@ -837,7 +835,6 @@ class LineChart {
     ctx.drawImage(backNode, 0, 0);
     this.clearCanvas(backNode);
     this.selectedItem = null;
-    console.info("--> handleLeaveChart ggwp 4444", this.selectedItem);
   }
 
   insidePanel(e) {
