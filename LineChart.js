@@ -743,7 +743,7 @@ class LineChart {
   drawTooltip({ index, from }) {
     const {
       nodes: {
-        canvas: { node: canvas, lineWidth, gridLineColor, backNode },
+        canvas: { node: canvas, lineWidth, gridLineColor },
       },
       maxValue,
       selectedItem,
@@ -762,8 +762,9 @@ class LineChart {
     const blankPaddingX = 15 * devicePixelRatio;
     const blankPaddingY = 8 * devicePixelRatio;
 
+    const chartPadding = 5 * devicePixelRatio;
     let blankWidth = blankPaddingX * 2;
-    let blankHeight = blankPaddingY * 2;
+    let blankHeight = blankPaddingY * 2 + chartPadding;
     let textPaddingLeft = blankPaddingX;
     let valuesWidth = blankPaddingX * 2;
     const valueFontPx = 18 * devicePixelRatio;
@@ -799,9 +800,12 @@ class LineChart {
         ctx.font = `bold ${datePx}px Tahoma serif`;
         const dateText = ctx.measureText(value);
         blankWidth += dateText.width;
-        blankHeight += datePx + 10 * devicePixelRatio;
+        blankHeight += datePx + blankPaddingY;
       }
     }
+
+    const rectY = h - (((max * 100) / maxValue) * h) / 100;
+    const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
@@ -820,13 +824,14 @@ class LineChart {
         ctx.lineWidth = 1 * devicePixelRatio;
         ctx.strokeStyle = gridLineColor;
         ctx.moveTo(x, height - bottom * devicePixelRatio);
-        ctx.lineTo(x, 0);
+        ctx.lineTo(x, limitedRectY);
         ctx.stroke();
       }
     }
 
-    const rectY = h - (((max * 100) / maxValue) * h) / 100;
-    const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2), 0);
+    const dateY = limitedRectY + datePx + blankPaddingY;
+    const valueY = limitedRectY + (datePx + blankPaddingY) * 2;
+    const chartY = valueY + chartFontPx + chartPadding;
 
     for (let i = 1; i < selectedItem.length; i++) {
       const { type, value, color, chart, textX } = selectedItem[i];
@@ -834,9 +839,9 @@ class LineChart {
       if (type !== "x") {
         ctx.fillStyle = color;
         ctx.font = `bold ${valueFontPx}px Tahoma serif`;
-        ctx.fillText(value, x + textX - centerX, limitedRectY);
+        ctx.fillText(value, x + textX - centerX, valueY);
         ctx.font = `normal ${chartFontPx}px Tahoma serif`;
-        ctx.fillText(chart, x + textX - centerX, limitedRectY);
+        ctx.fillText(chart, x + textX - centerX, chartY);
       } else {
         ctx.beginPath();
         ctx.save();
@@ -857,7 +862,6 @@ class LineChart {
         ctx.fill();
         ctx.stroke();
         ctx.restore();
-        const dateY = limitedRectY + datePx + blankPaddingY;
 
         ctx.beginPath();
         ctx.font = `bold ${datePx}px Tahoma serif`;
