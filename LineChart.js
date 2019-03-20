@@ -261,7 +261,8 @@ class LineChart {
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
       const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
-      const y = h - (((values[i] * 100) / maxValue) * h) / 100;
+
+      const y = h - (values[i] / maxValue) * h;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
 
@@ -781,7 +782,7 @@ class LineChart {
       const { type, value, chart } = item;
 
       if (type !== "x") {
-        const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
+        const y = h - (value / maxValue) * h + lineWidth / 2;
         dotYmin = Math.min(y, dotYmin);
         ctx.font = `bold ${valueFontPx}px Tahoma serif`;
         const text = ctx.measureText(value);
@@ -809,7 +810,7 @@ class LineChart {
     }
 
     const rectWidth = Math.max(blankWidth, valuesWidth);
-    const rectY = h - (((max * 100) / maxValue) * h) / 100;
+    const rectY = h - (max / maxValue) * h;
     const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
     const inDot = limitedRectY + blankHeight > dotYmin;
     const limitedX = rateLimit(
@@ -822,7 +823,7 @@ class LineChart {
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
-      const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
+      const y = h - (value / maxValue) * h + lineWidth / 2;
 
       if (type !== "x") {
         ctx.beginPath();
