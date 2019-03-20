@@ -28,7 +28,7 @@
         .then(res => {
           console.info("--> fetch ggwp", res);
           const root = document.getElementById("root");
-          const data = res[0];
+          const data = res[4];
           let chart = new LineChart({
             root,
             data: normalizeData(data),

@@ -734,9 +734,10 @@ class LineChart {
     selectedData.sort((a, b) => b.value - a.value);
 
     this.selectedItem = selectedData;
-    if (selectedData && selectedData.length < 3) {
+    if ((selectedData && selectedData.length < 3) || index < Math.floor(from)) {
       return;
     }
+
     this.drawTooltip({ index, from });
   }
 
@@ -751,7 +752,7 @@ class LineChart {
       devicePixelRatio,
       offset: { left, bottom },
     } = this;
-    const { height } = this.getWithHeigthByRatio(canvas);
+    const { width, height } = this.getWithHeigthByRatio(canvas);
     const ctx = canvas.getContext("2d");
 
     const r = 5 * devicePixelRatio;
@@ -773,12 +774,15 @@ class LineChart {
     let centerX = blankPaddingX;
 
     const { max } = selectedItem[0];
+    let dotYmin = Infinity;
 
     for (let i = 1; i < selectedItem.length; i++) {
       const item = selectedItem[i];
       const { type, value, chart } = item;
 
       if (type !== "x") {
+        const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
+        dotYmin = Math.min(y, dotYmin);
         ctx.font = `bold ${valueFontPx}px Tahoma serif`;
         const text = ctx.measureText(value);
         ctx.font = `normal ${chartFontPx}px Tahoma serif`;
@@ -804,8 +808,17 @@ class LineChart {
       }
     }
 
+    const rectWidth = Math.max(blankWidth, valuesWidth);
     const rectY = h - (((max * 100) / maxValue) * h) / 100;
     const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
+    const inDot = limitedRectY + blankHeight > dotYmin;
+    const limitedX = rateLimit(
+      x,
+      left * devicePixelRatio + centerX - axialShift,
+      width - rectWidth + centerX + left * devicePixelRatio,
+    );
+
+    console.info("--> inDot ggwp 4444", inDot);
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
@@ -839,9 +852,9 @@ class LineChart {
       if (type !== "x") {
         ctx.fillStyle = color;
         ctx.font = `bold ${valueFontPx}px Tahoma serif`;
-        ctx.fillText(value, x + textX - centerX, valueY);
+        ctx.fillText(value, limitedX + textX - centerX, valueY);
         ctx.font = `normal ${chartFontPx}px Tahoma serif`;
-        ctx.fillText(chart, x + textX - centerX, chartY);
+        ctx.fillText(chart, limitedX + textX - centerX, chartY);
       } else {
         ctx.beginPath();
         ctx.save();
@@ -853,9 +866,9 @@ class LineChart {
 
         roundRect({
           canvas,
-          x: x - centerX,
+          x: limitedX - centerX,
           y: limitedRectY,
-          w: Math.max(blankWidth, valuesWidth),
+          w: rectWidth,
           h: blankHeight,
           r: 6,
         });
@@ -866,7 +879,7 @@ class LineChart {
         ctx.beginPath();
         ctx.font = `bold ${datePx}px Tahoma serif`;
         ctx.fillStyle = "#262c37";
-        ctx.fillText(value, x + blankPaddingX - centerX, dateY);
+        ctx.fillText(value, limitedX + blankPaddingX - centerX, dateY);
         ctx.stroke();
       }
     }
