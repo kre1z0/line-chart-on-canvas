@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./chart.css" />
   </head>
   <body>
-    <button class="mode-btn">Switch to Night mode - Day Mode</button>
+    <button class="mode-btn">Switch to Day Mode</button>
     <header class="header">
       <span>Select a chart</span>
       <select id="select">
@@ -50,8 +50,10 @@
             dark = !dark;
 
             if (document.body.classList.contains("dark")) {
+              modeBtn.innerText = "Switch to Night Mode";
               document.body.classList.remove("dark");
             } else {
+              modeBtn.innerText = "Switch to Day Mode";
               document.body.classList.add("dark");
             }
 
