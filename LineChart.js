@@ -22,7 +22,7 @@ class LineChart {
       tooltipFill: "#fff",
       tooltipShadowColor: "rgba(213,213,213,0.9)",
       textColor: "#262c37",
-      gridLineColor: "#f1f1f1",
+      gridLineColor: "#e9e9e9",
       labelColor: "#9CA1A6",
       previewFill: "rgba(244,249,252,0.84)",
       previewStroke: "rgba(0,0,0,0.14)",
@@ -69,6 +69,8 @@ class LineChart {
     this.labelsIsDrawn = false;
     this.selectedItem = null;
     this.init();
+
+    this.drawTooltip = throttle(this.drawTooltip, 144);
   }
 
   init() {
