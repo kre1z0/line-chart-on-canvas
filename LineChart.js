@@ -466,6 +466,8 @@ class LineChart {
     canvas.addEventListener("mousemove", this.handleMoveInChart.bind(this));
     canvas.addEventListener("touchmove", this.handleMoveInChart.bind(this));
     canvas.addEventListener("mouseleave", this.handleLeaveChart.bind(this));
+    canvas.addEventListener("touchstart", this.handleMoveInChart.bind(this));
+    canvas.addEventListener("touchend", this.handleLeaveChart.bind(this));
   }
 
   clearCanvas(canvas) {
@@ -690,24 +692,25 @@ class LineChart {
       backCtx.drawImage(canvas, 0, 0);
     }
 
-    if (selectedItem !== null && (selectedItem && selectedItem[0] === index)) {
+    if (selectedItem !== null && (selectedItem && selectedItem[0].index === index)) {
       return;
-    } else if (selectedItem !== null && (selectedItem && selectedItem[0] !== index)) {
+    } else if (selectedItem !== null && (selectedItem && selectedItem[0].index !== index)) {
       this.clearCanvas(canvas);
       ctx.drawImage(backNode, 0, 0);
     }
 
     const selectedData = [];
 
-    selectedData.push(index);
+    let max = 0;
+    selectedData.push({ index });
 
     for (let i = 0; i < data.length; i++) {
-      const { type, values, color, name } = data[i];
+      const { type, values, color, chart } = data[i];
       const value = values[index];
-
       if (type !== "x") {
+        max = Math.max(max, value);
         selectedData.push({
-          name,
+          chart,
           color,
           value,
         });
@@ -725,6 +728,8 @@ class LineChart {
         });
       }
     }
+
+    selectedData[0].max = max;
 
     selectedData.sort((a, b) => b.value - a.value);
 
@@ -755,18 +760,53 @@ class LineChart {
     const axialShift = getAxialShift(lineLength, from);
     const x = lineLength * (index - Math.floor(from)) + left * devicePixelRatio - axialShift;
     const blankPaddingX = 15 * devicePixelRatio;
-    const blankPaddingY = 10 * devicePixelRatio;
-
-    const bw = 100 * devicePixelRatio;
-    const bh = 90 * devicePixelRatio;
+    const blankPaddingY = 8 * devicePixelRatio;
 
     let blankWidth = blankPaddingX * 2;
     let blankHeight = blankPaddingY * 2;
     let textPaddingLeft = blankPaddingX;
+    let valuesWidth = blankPaddingX * 2;
+    const valueFontPx = 18 * devicePixelRatio;
+    const chartFontPx = 14 * devicePixelRatio;
+    const datePx = 16 * devicePixelRatio;
+    let centerX = blankPaddingX;
+
+    const { max } = selectedItem[0];
 
     for (let i = 1; i < selectedItem.length; i++) {
-      const { type, color, value } = selectedItem[i];
+      const item = selectedItem[i];
+      const { type, value, chart } = item;
+
+      if (type !== "x") {
+        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
+        const text = ctx.measureText(value);
+        ctx.font = `normal ${chartFontPx}px Tahoma serif`;
+        const textBottom = ctx.measureText(chart);
+        const isLast = i === selectedItem.length - 1;
+        const marginLeft = isLast ? 0 : 20;
+
+        const itemWidth = Math.max(text.width + marginLeft, textBottom.width + marginLeft);
+
+        valuesWidth += itemWidth;
+        if (i === 2) {
+          centerX += Math.max(text.width / 2, textBottom.width / 2);
+          blankHeight += valueFontPx + chartFontPx;
+        }
+
+        item.textX = textPaddingLeft;
+        textPaddingLeft += itemWidth;
+      } else {
+        ctx.font = `bold ${datePx}px Tahoma serif`;
+        const dateText = ctx.measureText(value);
+        blankWidth += dateText.width;
+        blankHeight += datePx + 10 * devicePixelRatio;
+      }
+    }
+
+    for (let i = 0; i < selectedItem.length; i++) {
+      const { type, value, color } = selectedItem[i];
       const y = h - (((value * 100) / maxValue) * h) / 100 + lineWidth / 2;
+
       if (type !== "x") {
         ctx.beginPath();
         ctx.arc(x, y, r, 0, 2 * Math.PI, false);
@@ -775,52 +815,7 @@ class LineChart {
         ctx.lineWidth = circleLw;
         ctx.strokeStyle = color;
         ctx.stroke();
-
-        ctx.beginPath();
-        ctx.fillStyle = color;
-        const valueFontPx = 18 * devicePixelRatio;
-        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
-        const text = ctx.measureText(value);
-        ctx.fillText(value, x + textPaddingLeft, 148 + blankPaddingY);
-        const nameFontPx = 14 * devicePixelRatio;
-        blankHeight += valueFontPx + nameFontPx;
-        ctx.font = `normal ${nameFontPx}px Tahoma serif`;
-        const tttt = "ggwp nore 4444";
-        const textBottom = ctx.measureText(tttt);
-        ctx.fillText(tttt, x + textPaddingLeft, 144 + blankPaddingY + 18 * devicePixelRatio);
-        const itemWidth = Math.max(text.width + 20, textBottom.width + 20);
-
-        if (i === 3) {
-          blankWidth = Math.max(itemWidth, blankWidth);
-        } else {
-          blankWidth += itemWidth;
-        }
-        textPaddingLeft += itemWidth;
-        ctx.stroke();
       } else {
-        ctx.save();
-        ctx.lineWidth = devicePixelRatio;
-        ctx.strokeStyle = gridLineColor;
-        ctx.shadowColor = gridLineColor;
-        ctx.shadowBlur = 2;
-        ctx.fillStyle = "#fff";
-        roundRect({ canvas, x, y: 100, w: bw, h: bh, r: 6 });
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.save();
-        ctx.beginPath();
-        const textPx = 16 * devicePixelRatio;
-        ctx.font = `bold ${textPx}px Tahoma serif`;
-        ctx.fillStyle = "#262c37";
-        const dateText = ctx.measureText(value);
-        blankWidth += dateText.width;
-        blankHeight += textPx + 10 * devicePixelRatio;
-        ctx.fillText(value, x + blankPaddingX, 120 + blankPaddingY);
-        ctx.stroke();
-        ctx.restore();
-
         ctx.beginPath();
         ctx.lineWidth = 1 * devicePixelRatio;
         ctx.strokeStyle = gridLineColor;
@@ -829,10 +824,48 @@ class LineChart {
         ctx.stroke();
       }
     }
-    console.info("--> ggwp 4444", {
-      blankWidth,
-      blankHeight,
-    });
+
+    const rectY = h - (((max * 100) / maxValue) * h) / 100;
+    const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2), 0);
+
+    for (let i = 1; i < selectedItem.length; i++) {
+      const { type, value, color, chart, textX } = selectedItem[i];
+
+      if (type !== "x") {
+        ctx.fillStyle = color;
+        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
+        ctx.fillText(value, x + textX - centerX, limitedRectY);
+        ctx.font = `normal ${chartFontPx}px Tahoma serif`;
+        ctx.fillText(chart, x + textX - centerX, limitedRectY);
+      } else {
+        ctx.beginPath();
+        ctx.save();
+        ctx.lineWidth = devicePixelRatio;
+        ctx.strokeStyle = gridLineColor;
+        ctx.shadowColor = gridLineColor;
+        ctx.shadowBlur = 2;
+        ctx.fillStyle = "#fff";
+
+        roundRect({
+          canvas,
+          x: x - centerX,
+          y: limitedRectY,
+          w: Math.max(blankWidth, valuesWidth),
+          h: blankHeight,
+          r: 6,
+        });
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        const dateY = limitedRectY + datePx + blankPaddingY;
+
+        ctx.beginPath();
+        ctx.font = `bold ${datePx}px Tahoma serif`;
+        ctx.fillStyle = "#262c37";
+        ctx.fillText(value, x + blankPaddingX - centerX, dateY);
+        ctx.stroke();
+      }
+    }
   }
 
   handleLeaveChart() {
