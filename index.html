@@ -23,11 +23,10 @@
     <script src="./utils.js"></script>
     <script src="./LineChart.js"></script>
     <script>
-      let dark = true;
-
       fetch("./data.json")
         .then(response => response.json())
         .then(res => {
+          let dark = true;
           console.info("--> fetch ggwp", res);
           const root = document.getElementById("root");
           const modeBtn = document.querySelector(".mode-btn");
@@ -44,7 +43,7 @@
           const select = document.getElementById("select");
           select.addEventListener("change", e => {
             const value = +e.target.value - 1;
-            chart.update({ data: normalizeData(res[value]) });
+            chart.update({ data: normalizeData(res[value]), dark });
           });
           modeBtn.addEventListener("click", () => {
             dark = !dark;
