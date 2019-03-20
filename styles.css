@@ -1,5 +1,12 @@
 body {
 	margin: 0;
+	padding: 24px 0;
+	font: 13px/18px Tahoma,sans-serif,Arial,Helvetica;
+}
+
+body.dark {
+	color: #fff;
+	background-color: #242F3E;
 }
 
 .header {
@@ -14,7 +21,7 @@ body {
 
 .mode-btn {
 	display: block;
-	margin: 20px auto 0 auto;
+	margin: 0 auto;
 	text-align: center;
 	padding: 5px;
 	font-weight: 600;

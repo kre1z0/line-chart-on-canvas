@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./chart.css" />
   </head>
   <body>
-    <button class="mode-btn">Switch to night mode</button>
+    <button class="mode-btn">Switch to Night mode - Day Mode</button>
     <header class="header">
       <span>Select a chart</span>
       <select id="select">
@@ -23,21 +23,39 @@
     <script src="./utils.js"></script>
     <script src="./LineChart.js"></script>
     <script>
+      let dark = true;
+
       fetch("./data.json")
         .then(response => response.json())
         .then(res => {
           console.info("--> fetch ggwp", res);
           const root = document.getElementById("root");
-          const data = res[4];
+          const modeBtn = document.querySelector(".mode-btn");
+
+          const data = res[0];
+
           let chart = new LineChart({
+            dark,
             root,
             data: normalizeData(data),
             header: `<h2>Chart #${1}</h2>`,
           });
+          document.body.classList.add("dark");
           const select = document.getElementById("select");
           select.addEventListener("change", e => {
             const value = +e.target.value - 1;
-            chart.updateData(normalizeData(res[value]));
+            chart.update({ data: normalizeData(res[value]) });
+          });
+          modeBtn.addEventListener("click", () => {
+            dark = !dark;
+
+            if (document.body.classList.contains("dark")) {
+              document.body.classList.remove("dark");
+            } else {
+              document.body.classList.add("dark");
+            }
+
+            chart.update({ dark });
           });
         });
     </script>

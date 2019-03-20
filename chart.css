@@ -3,6 +3,15 @@
 	margin-bottom: 0;
 }
 
+.tgLineChart-container {
+	padding-top: 44px;
+}
+
+.tgLineChart-container.tgLineChart-dark {
+	color: #fff;
+	background-color: #242F3E;
+}
+
 .tgLineChart-container canvas {
 	user-select: none;
 }
@@ -12,13 +21,17 @@
 	height: 47px;
 	box-sizing: border-box;
 	display: inline-block;
-	border: 1px solid #dfe1e3;
+	border: 2px solid #edeff1;
 	border-radius: 24px;
 	padding: 8px 12px;
 	font-size: 18px;
 	user-select: none;
 	cursor: pointer;
 	-webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+.tgLineChart-container.tgLineChart-dark .tgLineChart-control {
+	border-color: #2F3C4C;
 }
 
 .tgLineChart-control:first-of-type {
@@ -28,7 +41,7 @@
 .tgLineChart-control span {
 	display: inline-block;
 	vertical-align: top;
-	line-height: 30px;
+	line-height: 28px;
 }
 
 .tgLineChart-control:not(:last-of-type) {
@@ -72,3 +85,8 @@
 .tgLineChart-control input[type=checkbox]:checked ~ .tgLineChart-checkmark-icon  {
 	border-width: 14px;
 }
+
+.tgLineChart-container.tgLineChart-dark .tgLineChart-control input[type=checkbox]:not(:checked) ~ .tgLineChart-checkmark-icon:before  {
+	border-color: #242F3E;
+}
+

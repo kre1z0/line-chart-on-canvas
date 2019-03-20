@@ -1,8 +1,36 @@
 "use asm";
 
 class LineChart {
-  constructor({ root, data, offset, header }) {
+  constructor({ root, data, offset, header, dark = false }) {
     const devicePixelRatio = window.devicePixelRatio || 1;
+    this.classNamePrefix = "tgLineChart";
+    this.font = "Tahoma,sans-serif,Arial,Helvetica";
+
+    this.darkTheme = {
+      fillColor: "#242F3E",
+      tooltipFill: "#253241",
+      tooltipShadowColor: "#1f2733",
+      textColor: "#fff",
+      gridLineColor: "#2F3C4C",
+      labelColor: "#526d83",
+      previewFill: "rgba(31,42,55,0.74)",
+      previewStroke: "rgba(64,86,107,0.86)",
+    };
+
+    this.lightTheme = {
+      fillColor: "#fff",
+      tooltipFill: "#fff",
+      tooltipShadowColor: "rgba(213,213,213,0.9)",
+      textColor: "#262c37",
+      gridLineColor: "#f1f1f1",
+      labelColor: "#9CA1A6",
+      previewFill: "rgba(244,249,252,0.84)",
+      previewStroke: "rgba(0,0,0,0.14)",
+    };
+
+    this.theme = dark ? this.darkTheme : this.lightTheme;
+    const container = document.createElement("div");
+    container.classList.add(`${this.classNamePrefix}-${dark ? "dark" : "light"}`);
 
     this.data = data;
     this.root = root;
@@ -10,14 +38,13 @@ class LineChart {
     this.offset = { left: 20, right: 20, bottom: 44, ...offset };
     this.nodes = {
       container: {
-        node: document.createElement("div"),
+        node: container,
       },
       canvas: {
         node: document.createElement("canvas"),
         backNode: document.createElement("canvas"),
         height: 400,
         lineWidth: 3 * devicePixelRatio,
-        gridLineColor: "#f1f1f1",
       },
       previewCanvas: {
         backNode: document.createElement("canvas"),
@@ -35,8 +62,8 @@ class LineChart {
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
     this.lineLength =
-      (window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
-    this.classNamePrefix = "tgLineChart";
+      rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
+
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
     this.labelsIsDrawn = false;
@@ -51,8 +78,27 @@ class LineChart {
     this.setListeners();
   }
 
-  updateData(data) {
-    this.data = data;
+  update({ data, dark }) {
+    const {
+      classNamePrefix,
+      nodes: {
+        container: { node: container },
+      },
+    } = this;
+    this.labelsIsDrawn = false;
+    this.theme = dark ? this.darkTheme : this.lightTheme;
+
+    if (dark) {
+      container.classList.remove(`${classNamePrefix}-light`);
+      container.classList.add(`${classNamePrefix}-dark`);
+    } else {
+      container.classList.remove(`${classNamePrefix}-dark`);
+      container.classList.add(`${classNamePrefix}-light`);
+    }
+
+    if (data) {
+      this.data = data;
+    }
     this.clearAllCanvases();
     this.draw();
   }
@@ -125,7 +171,6 @@ class LineChart {
 
         // preview canvas
         if (withPreview) {
-          console.info("--> alarm ggwp", new Date());
           this.drawLine({
             height: previewCanvasH,
             data: item,
@@ -146,9 +191,10 @@ class LineChart {
   }
 
   yAxis(maxValue) {
-    const { nodes, offset, devicePixelRatio, disabledLines } = this;
+    const { nodes, offset, devicePixelRatio, disabledLines, theme } = this;
+    const { gridLineColor, labelColor } = theme;
     const {
-      canvas: { node: canvas, gridLineColor },
+      canvas: { node: canvas },
     } = nodes;
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
@@ -164,11 +210,11 @@ class LineChart {
     const ctx = canvas.getContext("2d");
     ctx.beginPath();
     const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px Tahoma serif`;
+    ctx.font = `${textPx}px Tahoma,sans-serif,Arial,Helvetica`;
 
     for (let i = 0; i < yScale.length; i++) {
       const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
-      ctx.fillStyle = "#9CA1A6";
+      ctx.fillStyle = labelColor;
       ctx.fillText(yScale[i], left, y - 8);
       ctx.strokeStyle = gridLineColor;
       ctx.lineWidth = 1 * devicePixelRatio;
@@ -236,7 +282,12 @@ class LineChart {
     bottom = 0,
     labels = [],
   }) {
-    const { offset, devicePixelRatio, labelsIsDrawn } = this;
+    const {
+      offset,
+      devicePixelRatio,
+      labelsIsDrawn,
+      theme: { labelColor },
+    } = this;
     const { values, color } = data;
     const { left } = offset;
     const ctx = canvas.getContext("2d");
@@ -249,7 +300,7 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px Tahoma serif`;
+    ctx.font = `${textPx}px Tahoma,sans-serif,Arial,Helvetica`;
     ctx.textAlign = "center";
     ctx.translate(0.5, 0.5);
 
@@ -262,14 +313,17 @@ class LineChart {
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
-      const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
+      const x =
+        lineLength * startIndex +
+        ((left + roundLineCap) * devicePixelRatio - axialShift) -
+        1 * devicePixelRatio;
 
       const y = h - (values[i] / maxValue) * h;
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
 
       if (startIndex === 0) {
-        const items = new Array(Math.ceil(left / lineLength));
+        const items = new Array(rateLimit(Math.ceil(left / lineLength), 0));
 
         if (items.length > 0) {
           let extraX = x;
@@ -305,6 +359,7 @@ class LineChart {
         } else if (i === 0) {
           ctx.textAlign = "left";
         }
+        ctx.fillStyle = labelColor;
 
         if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
           ctx.fillText(label, x, h + 24 * devicePixelRatio);
@@ -747,8 +802,9 @@ class LineChart {
   drawTooltip({ index, from }) {
     const {
       nodes: {
-        canvas: { node: canvas, lineWidth, gridLineColor },
+        canvas: { node: canvas, lineWidth },
       },
+      theme: { gridLineColor, textColor, tooltipFill, fillColor, tooltipShadowColor },
       maxValue,
       selectedItem,
       lineLength,
@@ -786,9 +842,9 @@ class LineChart {
       if (type !== "x") {
         const y = h - (value / maxValue) * h + lineWidth / 2;
         dotYmin = Math.min(y, dotYmin);
-        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
+        ctx.font = `bold ${valueFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
         const text = ctx.measureText(value);
-        ctx.font = `normal ${chartFontPx}px Tahoma serif`;
+        ctx.font = `normal ${chartFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
         const textBottom = ctx.measureText(chart);
         const isLast = i === selectedItem.length - 1;
         const marginLeft = isLast ? 0 : 20;
@@ -804,7 +860,7 @@ class LineChart {
         item.textX = textPaddingLeft;
         textPaddingLeft += itemWidth;
       } else {
-        ctx.font = `bold ${datePx}px Tahoma serif`;
+        ctx.font = `bold ${datePx}px Tahoma,sans-serif,Arial,Helvetica`;
         const dateText = ctx.measureText(value);
         blankWidth += dateText.width;
         blankHeight += datePx + blankPaddingY;
@@ -834,7 +890,7 @@ class LineChart {
       if (type !== "x") {
         ctx.beginPath();
         ctx.arc(x, y, r, 0, 2 * Math.PI, false);
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = fillColor;
         ctx.fill();
         ctx.lineWidth = circleLw;
         ctx.strokeStyle = color;
@@ -858,18 +914,19 @@ class LineChart {
 
       if (type !== "x") {
         ctx.fillStyle = color;
-        ctx.font = `bold ${valueFontPx}px Tahoma serif`;
+        ctx.font = `bold ${valueFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
         ctx.fillText(value, limitedX + textX - centerX, valueY);
-        ctx.font = `normal ${chartFontPx}px Tahoma serif`;
+        ctx.font = `normal ${chartFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
         ctx.fillText(chart, limitedX + textX - centerX, chartY);
       } else {
         ctx.beginPath();
         ctx.save();
         ctx.lineWidth = devicePixelRatio;
-        ctx.strokeStyle = gridLineColor;
-        ctx.shadowColor = gridLineColor;
-        ctx.shadowBlur = 2;
-        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = "transparent";
+        ctx.shadowColor = tooltipShadowColor;
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = tooltipFill;
 
         roundRect({
           canvas,
@@ -884,8 +941,8 @@ class LineChart {
         ctx.restore();
 
         ctx.beginPath();
-        ctx.font = `bold ${datePx}px Tahoma serif`;
-        ctx.fillStyle = "#262c37";
+        ctx.font = `bold ${datePx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.fillStyle = textColor;
         ctx.fillText(value, limitedX + blankPaddingX - centerX, dateY);
         ctx.stroke();
       }
@@ -927,7 +984,8 @@ class LineChart {
   }
 
   fillPreviewCanvas(x, panelWidth) {
-    const { nodes, controlBorderWidth, offset, devicePixelRatio } = this;
+    const { nodes, controlBorderWidth, offset, devicePixelRatio, theme } = this;
+    const { previewFill, previewStroke } = theme;
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
@@ -938,7 +996,7 @@ class LineChart {
     const ctx = previewCanvas.getContext("2d");
 
     ctx.beginPath();
-    ctx.fillStyle = hexToRGB("#F4F9FC", 0.76);
+    ctx.fillStyle = previewFill;
 
     // before
     ctx.rect(left * devicePixelRatio, 0, x, height);
@@ -952,7 +1010,7 @@ class LineChart {
     // center
     ctx.beginPath();
     ctx.lineWidth = controlBorderWidth;
-    ctx.strokeStyle = "rgba(0,0,0, 0.14)";
+    ctx.strokeStyle = previewStroke;
     ctx.rect(
       x + left * devicePixelRatio + controlBorderWidth / 2,
       0,
