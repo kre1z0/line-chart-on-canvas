@@ -813,13 +813,17 @@ class LineChart {
     const rectY = h - (max / maxValue) * h;
     const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
     const inDot = limitedRectY + blankHeight > dotYmin;
+    const flipX =
+      width - x < x
+        ? x - rectWidth + centerX - (r + circleLw / 2) - blankPaddingX
+        : x + centerX + (r + circleLw / 2) + blankPaddingX;
+
+    const rofl = inDot ? flipX : x;
     const limitedX = rateLimit(
-      x,
+      rofl,
       left * devicePixelRatio + centerX - axialShift,
       width - rectWidth + centerX + left * devicePixelRatio,
     );
-
-    console.info("--> inDot ggwp 4444", inDot);
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
