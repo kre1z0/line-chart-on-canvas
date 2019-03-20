@@ -79,17 +79,13 @@ class LineChart {
     this.draw();
     this.setListeners();
 
-    function makeEaseOut(timing) {
-      return timeFraction => 1 - timing(1 - timeFraction);
-    }
-
-    function quad(timeFraction) {
-      return Math.pow(timeFraction, 2);
+    function easeInCubic(t) {
+      return t * t * t;
     }
 
     this.animate({
       duration: 1000,
-      timing: makeEaseOut(quad),
+      timing: easeInCubic,
       draw: progress => {
         console.info("-->progress ggwp 4444", progress);
       },
@@ -99,15 +95,10 @@ class LineChart {
   animate({ duration = 100, timing, draw }) {
     const start = performance.now();
     requestAnimationFrame(function animate(time) {
-      // timeFraction from 0 to 1
       let timeFraction = (time - start) / duration;
       if (timeFraction > 1) timeFraction = 1;
-
-      // current animation state
       const progress = timing(timeFraction);
-
       draw(progress);
-
       if (timeFraction < 1) {
         requestAnimationFrame(animate);
       }
