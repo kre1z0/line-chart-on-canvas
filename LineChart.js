@@ -492,16 +492,16 @@ class LineChart {
   }
 
   getPanelRect() {
-    const { panelW, controlBorderWidth, nodes, offset, panelX } = this;
+    const { panelW, controlBorderWidth, nodes, offset, panelX, devicePixelRatio } = this;
     const { previewCanvas } = nodes;
     const { left, right } = offset;
 
     const { height } = this.getWithHeigthByRatio(previewCanvas.node);
 
     return [
-      panelX + controlBorderWidth + left,
+      panelX + left * devicePixelRatio + controlBorderWidth,
       0,
-      panelX + panelW - controlBorderWidth + right,
+      panelX + panelW + right * devicePixelRatio - controlBorderWidth,
       height,
     ];
   }
@@ -652,14 +652,14 @@ class LineChart {
     const { x } = getPosition(e);
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
-    if (move) {
-      this.startPanelGrabbing = x * devicePixelRatio;
-      document.documentElement.style.cursor = "grabbing";
-      previewCanvas.node.style.cursor = "grabbing";
-    } else if (leftBorder || rightBorder) {
+    if (leftBorder || rightBorder) {
       this.startPanelResize = x * devicePixelRatio;
       document.documentElement.style.cursor = "col-resize";
       previewCanvas.node.style.cursor = "col-resize";
+    } else if (move) {
+      this.startPanelGrabbing = x * devicePixelRatio;
+      document.documentElement.style.cursor = "grabbing";
+      previewCanvas.node.style.cursor = "grabbing";
     }
   }
 
