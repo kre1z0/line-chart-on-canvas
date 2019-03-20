@@ -125,6 +125,7 @@ class LineChart {
 
         // preview canvas
         if (withPreview) {
+          console.info("--> alarm ggwp", new Date());
           this.drawLine({
             height: previewCanvasH,
             data: item,
@@ -250,6 +251,7 @@ class LineChart {
     const textPx = 14 * devicePixelRatio;
     ctx.font = `${textPx}px Tahoma serif`;
     ctx.textAlign = "center";
+    ctx.translate(0.5, 0.5);
 
     let startIndex = 0;
     const h = height - bottom * devicePixelRatio;
