@@ -79,16 +79,10 @@ class LineChart {
     this.draw();
     this.setListeners();
 
-    function easeInCubic(t) {
-      return t * t * t;
-    }
-
     this.animate({
-      duration: 1000,
+      duration: 144,
       timing: easeInCubic,
-      draw: progress => {
-        console.info("-->progress ggwp 4444", progress);
-      },
+      draw: progress => {},
     });
   }
 
@@ -738,7 +732,7 @@ class LineChart {
     const { previewCanvas } = nodes;
     const { x } = getPosition(e);
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
-    console.info("--> ggwp handleDown", this);
+
     if (leftBorder || rightBorder) {
       this.startPanelResize = x * devicePixelRatio;
       document.documentElement.style.cursor = "col-resize";
@@ -761,8 +755,14 @@ class LineChart {
       nodes: {
         canvas: { node: canvas, backNode },
       },
+      startPanelGrabbing,
+      startPanelResize,
       selectedItem,
     } = this;
+
+    if (startPanelGrabbing !== null || startPanelResize !== null) {
+      return;
+    }
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { x } = getPosition(e, devicePixelRatio);
@@ -986,10 +986,17 @@ class LineChart {
 
   handleLeaveChart() {
     const {
+      startPanelGrabbing,
+      startPanelResize,
       nodes: {
         canvas: { node: canvas, backNode },
       },
     } = this;
+
+    if (startPanelGrabbing !== null || startPanelResize !== null) {
+      return;
+    }
+
     this.clearCanvas(canvas);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(backNode, 0, 0);

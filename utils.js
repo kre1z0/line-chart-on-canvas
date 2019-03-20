@@ -160,3 +160,7 @@ function throttle(func, limit) {
     }
   };
 }
+
+function easeInCubic(t) {
+  return t * t * t;
+}
