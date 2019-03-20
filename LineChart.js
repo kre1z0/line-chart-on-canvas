@@ -78,6 +78,40 @@ class LineChart {
     this.resizeNodes();
     this.draw();
     this.setListeners();
+
+    function makeEaseOut(timing) {
+      return timeFraction => 1 - timing(1 - timeFraction);
+    }
+
+    function quad(timeFraction) {
+      return Math.pow(timeFraction, 2);
+    }
+
+    this.animate({
+      duration: 1000,
+      timing: makeEaseOut(quad),
+      draw: progress => {
+        console.info("-->progress ggwp 4444", progress);
+      },
+    });
+  }
+
+  animate({ duration = 100, timing, draw }) {
+    const start = performance.now();
+    requestAnimationFrame(function animate(time) {
+      // timeFraction from 0 to 1
+      let timeFraction = (time - start) / duration;
+      if (timeFraction > 1) timeFraction = 1;
+
+      // current animation state
+      const progress = timing(timeFraction);
+
+      draw(progress);
+
+      if (timeFraction < 1) {
+        requestAnimationFrame(animate);
+      }
+    });
   }
 
   update({ data, dark }) {
@@ -115,6 +149,7 @@ class LineChart {
     const { width: previewCanvasW } = this.getWithHeigthByRatio(previewCanvas);
     this.panelW = this.getPanelWidth();
     this.lineLengthPreviewCanvas = getLineLength(data, previewCanvasW);
+
     this.panelX = previewCanvasW - this.panelW;
     const { from } = this.getGrab({ x: this.panelX, panelWidth: this.panelW });
     const to = getDataMaxLength(data);
@@ -712,7 +747,7 @@ class LineChart {
     const { previewCanvas } = nodes;
     const { x } = getPosition(e);
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
-
+    console.info("--> ggwp handleDown", this);
     if (leftBorder || rightBorder) {
       this.startPanelResize = x * devicePixelRatio;
       document.documentElement.style.cursor = "col-resize";
@@ -815,6 +850,11 @@ class LineChart {
       devicePixelRatio,
       offset: { left, bottom },
     } = this;
+
+    if (selectedItem === null) {
+      return;
+    }
+
     const { width, height } = this.getWithHeigthByRatio(canvas);
     const ctx = canvas.getContext("2d");
 
