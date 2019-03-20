@@ -191,7 +191,7 @@ class LineChart {
   }
 
   yAxis(maxValue) {
-    const { nodes, offset, devicePixelRatio, disabledLines, theme } = this;
+    const { nodes, offset, devicePixelRatio, disabledLines, theme, font } = this;
     const { gridLineColor, labelColor } = theme;
     const {
       canvas: { node: canvas },
@@ -210,7 +210,7 @@ class LineChart {
     const ctx = canvas.getContext("2d");
     ctx.beginPath();
     const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px Tahoma,sans-serif,Arial,Helvetica`;
+    ctx.font = `${textPx}px ${font}`;
 
     for (let i = 0; i < yScale.length; i++) {
       const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
@@ -271,6 +271,7 @@ class LineChart {
 
   drawLine({
     data,
+    font,
     maxValue,
     canvas,
     height,
@@ -300,7 +301,7 @@ class LineChart {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px Tahoma,sans-serif,Arial,Helvetica`;
+    ctx.font = `${textPx}px ${font}`;
     ctx.textAlign = "center";
     ctx.translate(0.5, 0.5);
 
@@ -804,6 +805,7 @@ class LineChart {
       nodes: {
         canvas: { node: canvas, lineWidth },
       },
+      font,
       theme: { gridLineColor, textColor, tooltipFill, fillColor, tooltipShadowColor },
       maxValue,
       selectedItem,
@@ -842,9 +844,9 @@ class LineChart {
       if (type !== "x") {
         const y = h - (value / maxValue) * h + lineWidth / 2;
         dotYmin = Math.min(y, dotYmin);
-        ctx.font = `bold ${valueFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `bold ${valueFontPx}px ${font}`;
         const text = ctx.measureText(value);
-        ctx.font = `normal ${chartFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `normal ${chartFontPx}px ${font}`;
         const textBottom = ctx.measureText(chart);
         const isLast = i === selectedItem.length - 1;
         const marginLeft = isLast ? 0 : 20;
@@ -860,7 +862,7 @@ class LineChart {
         item.textX = textPaddingLeft;
         textPaddingLeft += itemWidth;
       } else {
-        ctx.font = `bold ${datePx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `bold ${datePx}px ${font}`;
         const dateText = ctx.measureText(value);
         blankWidth += dateText.width;
         blankHeight += datePx + blankPaddingY;
@@ -914,9 +916,9 @@ class LineChart {
 
       if (type !== "x") {
         ctx.fillStyle = color;
-        ctx.font = `bold ${valueFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `bold ${valueFontPx}px ${font}`;
         ctx.fillText(value, limitedX + textX - centerX, valueY);
-        ctx.font = `normal ${chartFontPx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `normal ${chartFontPx}px ${font}`;
         ctx.fillText(chart, limitedX + textX - centerX, chartY);
       } else {
         ctx.beginPath();
@@ -941,7 +943,7 @@ class LineChart {
         ctx.restore();
 
         ctx.beginPath();
-        ctx.font = `bold ${datePx}px Tahoma,sans-serif,Arial,Helvetica`;
+        ctx.font = `bold ${datePx}px ${font}`;
         ctx.fillStyle = textColor;
         ctx.fillText(value, limitedX + blankPaddingX - centerX, dateY);
         ctx.stroke();
