@@ -35,7 +35,7 @@ class LineChart {
     this.data = data;
     this.root = root;
     this.header = header;
-    this.offset = { left: 20, right: 20, bottom: 44, ...offset };
+    this.offset = { left: 20, right: 20, bottom: 44, top: 24, ...offset };
     this.nodes = {
       container: {
         node: container,
@@ -165,7 +165,7 @@ class LineChart {
     lineLength = this.lineLength,
   }) {
     const { disabledLines, nodes, offset } = this;
-    const { bottom } = offset;
+    const { bottom, top } = offset;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
       previewCanvas: {
@@ -197,6 +197,7 @@ class LineChart {
           lineLength,
           lineWidth: canvasLineWidth,
           height: canvasH,
+          top,
           bottom,
           from,
           to,
@@ -239,7 +240,7 @@ class LineChart {
     const left = offset.left * devicePixelRatio;
     const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
     const { width, height } = this.getWithHeigthByRatio(canvas);
-    const h = height - offset.bottom * devicePixelRatio;
+    const h = height - (offset.bottom + offset.top) * devicePixelRatio;
     const ctx = canvas.getContext("2d");
     ctx.save();
     ctx.beginPath();
@@ -247,7 +248,10 @@ class LineChart {
     ctx.font = `${textPx}px ${font}`;
 
     for (let i = 0; i < yScale.length; i++) {
-      const y = i !== 0 ? h - i * (h / ticks) - 0.5 - translateY : h - 0.5;
+      const y =
+        i !== 0
+          ? h - i * (h / ticks) - 0.5 - translateY + +offset.top * devicePixelRatio
+          : h - 0.5 + offset.top * devicePixelRatio;
       const rY = (0.5 + y) | 0;
 
       ctx.fillStyle = hexToRGB(labelColor, progress);
@@ -329,10 +333,11 @@ class LineChart {
     to,
     axialShift = 0,
     bottom = 0,
+    top = 0,
     labels = [],
     alpha,
     labelsIsDrawn = true,
-  }) {
+  } = {}) {
     const {
       font,
       offset,
@@ -356,7 +361,7 @@ class LineChart {
     ctx.translate(0.5, 0.5);
 
     let startIndex = 0;
-    const h = height - bottom * devicePixelRatio;
+    const h = height - (bottom + top) * devicePixelRatio;
 
     const labelWidth = 140;
     const fromInt = Math.floor(from);
@@ -369,7 +374,8 @@ class LineChart {
         ((left + roundLineCap) * devicePixelRatio - axialShift) -
         1 * devicePixelRatio;
 
-      const y = h - (values[i] / maxValue) * h;
+      const y = h - (values[i] / maxValue) * h + top * devicePixelRatio;
+
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
 
@@ -383,7 +389,7 @@ class LineChart {
           ctx.beginPath();
           for (let index = 0; index < items.length; index++) {
             const x1 = x - lineLength * (index + 1);
-            const y1 = h - (((values[i - (index + 1)] * 100) / maxValue) * h) / 100;
+            const y1 = h - (values[i - (index + 1)] / maxValue) * h + top * devicePixelRatio;
 
             if (index === 0) {
               ctx.lineTo(extraX, extraY);
@@ -413,9 +419,9 @@ class LineChart {
         ctx.fillStyle = labelColor;
 
         if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
-          ctx.fillText(label, x, h + 24 * devicePixelRatio);
+          ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
         } else if (divider === 1) {
-          ctx.fillText(label, x, h + 24 * devicePixelRatio);
+          ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
         }
         ctx.restore();
       }
@@ -467,6 +473,7 @@ class LineChart {
     this.onDisabledLine(name);
     const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
     const axialShift = getAxialShift(this.lineLength, from);
+    this.drawYAxis({ max: maxValue });
     this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift, maxValue });
   }
 
@@ -928,7 +935,7 @@ class LineChart {
       selectedItem,
       lineLength,
       devicePixelRatio,
-      offset: { left, bottom },
+      offset: { left, bottom, top },
     } = this;
 
     if (selectedItem === null) {
@@ -940,7 +947,7 @@ class LineChart {
 
     const r = 5 * devicePixelRatio;
     const circleLw = 2 * devicePixelRatio;
-    const h = height - bottom * devicePixelRatio;
+    const h = height - (bottom + top) * devicePixelRatio;
     const axialShift = getAxialShift(lineLength, from);
     const x = lineLength * (index - Math.floor(from)) + left * devicePixelRatio - axialShift;
     const blankPaddingX = 15 * devicePixelRatio;
@@ -964,14 +971,14 @@ class LineChart {
       const { type, value, chart } = item;
 
       if (type !== "x") {
-        const y = h - (value / maxValue) * h + lineWidth / 2;
+        const y = h - (value / maxValue) * h + lineWidth / 2 + top * devicePixelRatio;
         dotYmin = Math.min(y, dotYmin);
         ctx.font = `bold ${valueFontPx}px ${font}`;
         const text = ctx.measureText(value);
         ctx.font = `normal ${chartFontPx}px ${font}`;
         const textBottom = ctx.measureText(chart);
         const isLast = i === selectedItem.length - 1;
-        const marginLeft = isLast ? 0 : 20;
+        const marginLeft = isLast ? 0 : 20 * devicePixelRatio;
 
         const itemWidth = Math.max(text.width + marginLeft, textBottom.width + marginLeft);
 
@@ -992,7 +999,7 @@ class LineChart {
     }
 
     const rectWidth = Math.max(blankWidth, valuesWidth);
-    const rectY = h - (max / maxValue) * h;
+    const rectY = h - (max / maxValue) * h + top * devicePixelRatio;
     const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
     const inDot = limitedRectY + blankHeight > dotYmin;
     const flipX =
@@ -1000,16 +1007,16 @@ class LineChart {
         ? x - rectWidth + centerX - (r + circleLw / 2) - blankPaddingX
         : x + centerX + (r + circleLw / 2) + blankPaddingX;
 
-    const rofl = inDot ? flipX : x;
+    const flippedX = inDot ? flipX : x;
     const limitedX = rateLimit(
-      rofl,
+      flippedX,
       left * devicePixelRatio + centerX - axialShift,
       width - rectWidth + centerX + left * devicePixelRatio,
     );
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
-      const y = h - (value / maxValue) * h + lineWidth / 2;
+      const y = h - (value / maxValue) * h + lineWidth / 2 + top * devicePixelRatio;
 
       if (type !== "x") {
         ctx.beginPath();
@@ -1020,11 +1027,13 @@ class LineChart {
         ctx.strokeStyle = color;
         ctx.stroke();
       } else {
+        const lineYFrom = rateLimit(limitedRectY, dotYmin);
+
         ctx.beginPath();
         ctx.lineWidth = 1 * devicePixelRatio;
         ctx.strokeStyle = gridLineColor;
         ctx.moveTo(x, height - bottom * devicePixelRatio);
-        ctx.lineTo(x, limitedRectY);
+        ctx.lineTo(x, lineYFrom);
         ctx.stroke();
       }
     }
