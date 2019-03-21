@@ -175,6 +175,6 @@ function throttle(func, limit) {
   };
 }
 
-function linear(t) {
+function easeInQuad(t) {
   return t * t;
 }
