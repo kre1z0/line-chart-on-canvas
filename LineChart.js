@@ -615,12 +615,13 @@ class LineChart {
     const {
       nodes: {
         canvas: { node: canvas },
+        previewCanvas: { node: previewCanvas },
       },
     } = this;
     document.addEventListener("mousemove", this.handleMove.bind(this));
     document.addEventListener("touchmove", this.handleMove.bind(this));
-    document.addEventListener("mousedown", this.handleDown.bind(this));
-    document.addEventListener("touchstart", this.handleDown.bind(this));
+    previewCanvas.addEventListener("mousedown", this.handleDown.bind(this));
+    previewCanvas.addEventListener("touchstart", this.handleDown.bind(this));
     document.addEventListener("mouseup", this.handleUp.bind(this));
     document.addEventListener("touchend", this.handleUp.bind(this));
     window.addEventListener("resize", this.handleResize.bind(this));
@@ -829,6 +830,7 @@ class LineChart {
       devicePixelRatio,
       maxValue: prevMaxValue,
     } = this;
+
     const { previewCanvas } = nodes;
     const {
       canvas: { node: canvas },
