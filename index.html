@@ -10,16 +10,6 @@
   </head>
   <body>
     <button class="mode-btn">Switch to Day Mode</button>
-    <header class="header">
-      <span>Select a chart</span>
-      <select id="select">
-        <option>1</option>
-        <option>2</option>
-        <option>3</option>
-        <option>4</option>
-        <option>5</option>
-      </select>
-    </header>
     <div id="root"></div>
     <script src="./utils.js"></script>
     <script src="./LineChart.js"></script>
@@ -41,7 +31,6 @@
 
       getJSON("./data.json", (err, res) => {
         let dark = false;
-        console.info("--> fetch ggwp", res);
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
 
@@ -54,11 +43,6 @@
           header: `<h2>Chart #${1}</h2>`,
         });
         // document.body.classList.add("dark");
-        const select = document.getElementById("select");
-        select.addEventListener("change", e => {
-          const value = +e.target.value - 1;
-          chart.update({ data: normalizeData(res[value]), dark });
-        });
         modeBtn.addEventListener("click", () => {
           dark = !dark;
 
@@ -70,7 +54,7 @@
             document.body.classList.add("dark");
           }
 
-          chart.update({ dark });
+          chart.updateTheme({ dark });
         });
       });
     </script>

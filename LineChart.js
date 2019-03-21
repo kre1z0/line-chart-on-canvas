@@ -98,14 +98,13 @@ class LineChart {
     });
   }
 
-  update({ data, dark }) {
+  updateTheme({ dark }) {
     const {
       classNamePrefix,
       nodes: {
         container: { node: container },
       },
     } = this;
-    this.disabledLines = [];
     this.theme = dark ? this.darkTheme : this.lightTheme;
 
     if (dark) {
@@ -115,13 +114,21 @@ class LineChart {
       container.classList.remove(`${classNamePrefix}-dark`);
       container.classList.add(`${classNamePrefix}-light`);
     }
-
-    if (data) {
-      this.savedData = data;
-      this.data = data;
-    }
     this.clearAllCanvases();
-    this.overdraw();
+
+    const { from, to, maxValue } = this.getGrab({ x: this.panelX, panelWidth: this.panelW });
+    const axialShift = getAxialShift(this.lineLength, from);
+
+    this.drawYAxis();
+    this.redraw({
+      data: this.data,
+      panelX: this.panelX,
+      panelW: this.panelW,
+      from,
+      to,
+      maxValue,
+      axialShift,
+    });
   }
 
   overdraw() {
@@ -360,7 +367,6 @@ class LineChart {
     const textPx = 14 * devicePixelRatio;
     ctx.font = `${textPx}px ${font}`;
     ctx.textAlign = "center";
-    ctx.translate(0.5, 0.5);
 
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;
@@ -371,10 +377,7 @@ class LineChart {
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
-      const x =
-        lineLength * startIndex +
-        ((left + roundLineCap) * devicePixelRatio - axialShift) -
-        1 * devicePixelRatio;
+      const x = lineLength * startIndex + ((left + roundLineCap) * devicePixelRatio - axialShift);
 
       const y = h - (values[i] / (maxValue || previewMaxValue)) * h + top * devicePixelRatio;
 
