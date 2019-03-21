@@ -22,7 +22,10 @@ function getPosition(e, ratio = 1) {
   const { left, top } = e.target.getBoundingClientRect();
 
   if (e.type === "touchmove" || e.type === "touchstart") {
-    return { x: (e.touches[0].pageX - left) * ratio, y: (e.touches[0].pageY - top) * ratio };
+    return {
+      x: (e.touches[0].pageX - left) * ratio,
+      y: (e.touches[0].pageY - window.pageYOffset) * ratio,
+    };
   } else if (e.type === "touchend") {
     return {
       x: e.changedTouches[e.changedTouches.length - 1].pageX * ratio,
@@ -129,6 +132,7 @@ function getLineLength(data, containerWidth, withRemainder = true) {
 
 function isDotInsideRect(position, rect) {
   const [x, y] = position;
+
   const [xMin, yMin, xMax, yMax] = rect;
 
   return xMin <= x && xMax >= x && yMin <= y && yMax >= y;
