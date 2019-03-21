@@ -40,7 +40,7 @@
       };
 
       getJSON("./data.json", (err, res) => {
-        let dark = true;
+        let dark = false;
         console.info("--> fetch ggwp", res);
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
@@ -53,7 +53,7 @@
           data: normalizeData(data),
           header: `<h2>Chart #${1}</h2>`,
         });
-        document.body.classList.add("dark");
+        // document.body.classList.add("dark");
         const select = document.getElementById("select");
         select.addEventListener("change", e => {
           const value = +e.target.value - 1;

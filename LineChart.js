@@ -61,12 +61,13 @@ class LineChart {
     this.panelW = 0;
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
+    this.ticks = 6;
+    this.props = {};
     this.lineLength =
       rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
 
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
-    this.labelsIsDrawn = false;
     this.selectedItem = null;
     this.init();
 
@@ -76,23 +77,18 @@ class LineChart {
   init() {
     this.appendNodes();
     this.resizeNodes();
-    this.draw();
+    this.overdraw();
     this.setListeners();
-
-    this.animate({
-      duration: 144,
-      timing: easeInCubic,
-      draw: progress => {},
-    });
   }
 
-  animate({ duration = 100, timing, draw }) {
+  animate({ duration = 144, timing, draw }) {
+    const self = this;
     const start = performance.now();
     requestAnimationFrame(function animate(time) {
       let timeFraction = (time - start) / duration;
       if (timeFraction > 1) timeFraction = 1;
       const progress = timing(timeFraction);
-      draw(progress);
+      draw(progress, self);
       if (timeFraction < 1) {
         requestAnimationFrame(animate);
       }
@@ -106,7 +102,7 @@ class LineChart {
         container: { node: container },
       },
     } = this;
-    this.labelsIsDrawn = false;
+    this.disabledLines = [];
     this.theme = dark ? this.darkTheme : this.lightTheme;
 
     if (dark) {
@@ -121,10 +117,10 @@ class LineChart {
       this.data = data;
     }
     this.clearAllCanvases();
-    this.draw();
+    this.overdraw();
   }
 
-  draw() {
+  overdraw() {
     const { nodes, lineLength, disabledLines } = this;
     const {
       previewCanvas: { node: previewCanvas, backNode },
@@ -143,7 +139,7 @@ class LineChart {
 
     const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
-    this.yAxis(this.maxValue);
+
     this.redraw({
       panelX: this.panelX,
       panelW: this.panelW,
@@ -154,7 +150,16 @@ class LineChart {
     });
   }
 
-  redraw({ panelX, panelW, from = 0, to, withPreview = true, maxValue, axialShift = 0 }) {
+  redraw({
+    panelX,
+    panelW,
+    from = 0,
+    to,
+    withPreview = true,
+    maxValue,
+    axialShift = 0,
+    alpha = 1,
+  }) {
     const { disabledLines, nodes, lineLength, offset } = this;
     const { bottom } = offset;
     const {
@@ -172,12 +177,15 @@ class LineChart {
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const labels = data[0].labels;
 
+    let labelsIsDrawn = false;
+
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
 
       if (item.type === "line") {
         // main canvas
-        this.drawLine({
+        this.draw({
+          alpha,
           axialShift,
           data: item,
           maxValue: maxValue || getMaxValueFromTo({ data, from, to }),
@@ -189,11 +197,15 @@ class LineChart {
           from,
           to,
           labels,
+          labelsIsDrawn,
         });
+
+        labelsIsDrawn = true;
 
         // preview canvas
         if (withPreview) {
-          this.drawLine({
+          this.draw({
+            alpha,
             height: previewCanvasH,
             data: item,
             maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
@@ -212,8 +224,50 @@ class LineChart {
     }
   }
 
-  yAxis(maxValue) {
-    const { nodes, offset, devicePixelRatio, disabledLines, theme, font } = this;
+  drawYAxis(progress = 1, translateY = 0, max = 0) {
+    const { nodes, offset, devicePixelRatio, theme, font, ticks } = this;
+    const { gridLineColor, labelColor } = theme;
+    const {
+      canvas: { node: canvas },
+    } = nodes;
+    const maxValue = max || this.maxValue;
+
+    const left = offset.left * devicePixelRatio;
+    const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
+    const { width, height } = this.getWithHeigthByRatio(canvas);
+    const h = height - offset.bottom * devicePixelRatio;
+    const ctx = canvas.getContext("2d");
+    ctx.save();
+    ctx.beginPath();
+    const textPx = 14 * devicePixelRatio;
+    ctx.font = `${textPx}px ${font}`;
+
+    for (let i = 0; i < yScale.length; i++) {
+      const y = i !== 0 ? h - i * (h / ticks) - 0.5 - translateY : h - 0.5;
+      const rY = (0.5 + y) | 0;
+
+      ctx.fillStyle = hexToRGB(labelColor, progress);
+      ctx.fillText(yScale[i], left, rY - 8);
+      ctx.strokeStyle = hexToRGB(gridLineColor, progress);
+      ctx.lineWidth = 1 * devicePixelRatio;
+      ctx.moveTo(left, rY);
+      ctx.lineTo(width + left, rY);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  yAxis({ maxValue }) {
+    const {
+      nodes,
+      offset,
+      devicePixelRatio,
+      disabledLines,
+      theme,
+      maxValue: prevMaxValue,
+      font,
+    } = this;
     const { gridLineColor, labelColor } = theme;
     const {
       canvas: { node: canvas },
@@ -224,27 +278,19 @@ class LineChart {
       return;
     }
 
-    const left = offset.left * devicePixelRatio;
-    const ticks = 6;
-    const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
-    const { width, height } = this.getWithHeigthByRatio(canvas);
-    const h = height - offset.bottom * devicePixelRatio;
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px ${font}`;
-
-    for (let i = 0; i < yScale.length; i++) {
-      const y = i !== 0 ? h - i * (h / ticks) - 0.5 : h - 0.5;
-      ctx.fillStyle = labelColor;
-      ctx.fillText(yScale[i], left, y - 8);
-      ctx.strokeStyle = gridLineColor;
-      ctx.lineWidth = 1 * devicePixelRatio;
-      ctx.moveTo(left, y);
-      ctx.lineTo(width + left, y);
+    // this.drawYAxis();
+    if (prevMaxValue !== maxValue) {
+      this.maxValue = maxValue;
+      this.animate({
+        duration: 144,
+        timing: linear,
+        draw: progress => {
+          this.clearCanvas(canvas);
+          this.drawYAxis(Math.abs(progress), Math.abs(progress * 20));
+        },
+      });
+    } else {
     }
-
-    ctx.stroke();
   }
 
   getGrab({ x, panelWidth }) {
@@ -291,9 +337,8 @@ class LineChart {
     };
   }
 
-  drawLine({
+  draw({
     data,
-    font,
     maxValue,
     canvas,
     height,
@@ -304,11 +349,13 @@ class LineChart {
     axialShift = 0,
     bottom = 0,
     labels = [],
+    alpha,
+    labelsIsDrawn = true,
   }) {
     const {
+      font,
       offset,
       devicePixelRatio,
-      labelsIsDrawn,
       theme: { labelColor },
     } = this;
     const { values, color } = data;
@@ -320,7 +367,7 @@ class LineChart {
     let prevY = 0;
 
     ctx.lineCap = "round";
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = hexToRGB(color, alpha);
     ctx.lineWidth = lineWidth;
     const textPx = 14 * devicePixelRatio;
     ctx.font = `${textPx}px ${font}`;
@@ -371,6 +418,7 @@ class LineChart {
       }
 
       if (!labelsIsDrawn) {
+        console.info("--> label drawn ggwp 4444");
         const label = labels[i];
         const remainderFrom = fromInt % divider;
         const remainderIndex = startIndex % divider;
@@ -409,7 +457,6 @@ class LineChart {
       }
     }
 
-    this.labelsIsDrawn = true;
     ctx.restore();
   }
 
@@ -440,9 +487,7 @@ class LineChart {
     this.onDisabledLine(name);
     const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
     const axialShift = getAxialShift(this.lineLength, from);
-    this.yAxis(maxValue);
-    this.labelsIsDrawn = false;
-    this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift });
+    this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift, maxValue });
   }
 
   clearAllCanvases() {
@@ -499,8 +544,7 @@ class LineChart {
 
   handleResize() {
     this.resizeNodes();
-    this.labelsIsDrawn = false;
-    this.draw();
+    this.overdraw();
   }
 
   resizeNodes() {
@@ -611,10 +655,12 @@ class LineChart {
       startPanelGrabbing,
       panelX,
       panelW,
-      maxValue,
       lineLength,
       startPanelResize,
       devicePixelRatio,
+      maxValue: prevMaxValue,
+      offset,
+      ticks,
     } = this;
     const { previewCanvas } = nodes;
     const {
@@ -623,7 +669,7 @@ class LineChart {
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
     const isNotAction = startPanelGrabbing === null && startPanelResize === null;
     const { x } = getPosition(e, devicePixelRatio);
-    const { width: canvasWidth } = this.getWithHeigthByRatio(canvas);
+    const { width: canvasWidth, height: canvasHeight } = this.getWithHeigthByRatio(canvas);
     const { width } = this.getWithHeigthByRatio(previewCanvas.node);
 
     if (isNotAction && move) {
@@ -640,15 +686,14 @@ class LineChart {
       this.fillPreviewCanvas(pX, pW);
 
       const { from, to, maxValue } = this.getGrab({ x: pX, panelWidth: pW });
-      this.maxValue = maxValue;
+
       this.lineLength = canvasWidth / (to - from);
 
       const axialShift = getAxialShift(this.lineLength, from);
 
       this.clearCanvas(canvas);
-      this.yAxis(maxValue);
-      this.labelsIsDrawn = false;
       this.redraw({
+        maxValue,
         panelW: pW,
         panelX: pX,
         withPreview: false,
@@ -671,23 +716,69 @@ class LineChart {
         panelWidth: panelW,
       });
 
-      if (maxValue !== nextMaxValue) {
-        this.maxValue = nextMaxValue;
-      }
-
       const axialShift = getAxialShift(lineLength, from);
-      this.clearCanvas(canvas);
-      this.yAxis(nextMaxValue);
-      this.labelsIsDrawn = false;
-      this.redraw({
+
+      this.props = {
         panelX: nextX,
         panelW: panelW,
         from,
         to,
-        withPreview: false,
-        maxValue: nextMaxValue,
         axialShift,
-      });
+      };
+
+      const gridH = (canvasHeight - offset.bottom * devicePixelRatio) / ticks / 2;
+
+      if (prevMaxValue !== nextMaxValue) {
+        this.maxValue = nextMaxValue;
+        this.animate({
+          duration: 244,
+          timing: linear,
+          draw: (progress, { props }) => {
+            const { panelX, from, to, axialShift } = props;
+            const direction = prevMaxValue < nextMaxValue ? 1 : -1;
+            const slideOut = direction < 0 ? gridH * progress : -gridH * progress;
+            const slideIn = direction < 0 ? -gridH + gridH * progress : gridH - gridH * progress;
+
+            this.clearCanvas(canvas);
+
+            const outProgress = 1 - progress;
+            // out
+            this.drawYAxis(outProgress, slideOut, prevMaxValue);
+            // in
+            this.drawYAxis(progress, slideIn, nextMaxValue);
+            const diff =
+              direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
+            const slide =
+              direction < 0 ? prevMaxValue - diff * progress : prevMaxValue - diff * progress;
+
+            this.redraw({
+              panelX,
+              panelW: panelW,
+              from,
+              to,
+              withPreview: false,
+              maxValue: slide,
+              axialShift,
+            });
+
+            if (progress >= 1) {
+              this.props = {};
+            }
+          },
+        });
+      } else {
+        this.clearCanvas(canvas);
+        this.drawYAxis();
+        this.redraw({
+          panelX: nextX,
+          panelW: panelW,
+          from,
+          to,
+          withPreview: false,
+          maxValue: nextMaxValue,
+          axialShift,
+        });
+      }
     } else if (isNotAction) {
       previewCanvas.node.style.cursor = "default";
     }
