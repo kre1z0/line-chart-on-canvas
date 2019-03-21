@@ -367,6 +367,7 @@ class LineChart {
     const textPx = 14 * devicePixelRatio;
     ctx.font = `${textPx}px ${font}`;
     ctx.textAlign = "center";
+    ctx.translate(0.5, 0.5);
 
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;

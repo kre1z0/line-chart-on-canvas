@@ -29,20 +29,25 @@
         xhr.send();
       };
 
-      getJSON("./data.json", (err, res) => {
-        let dark = false;
+      getJSON("./data.json", (err, data) => {
+        let dark = true;
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
 
-        const data = res[0];
+        const charts = [];
 
-        let chart = new LineChart({
-          dark,
-          root,
-          data: normalizeData(data),
-          header: `<h2>Chart #${1}</h2>`,
-        });
-        // document.body.classList.add("dark");
+        for (let i = 0; i < data.length; i++) {
+          charts.push(
+            new LineChart({
+              dark,
+              root,
+              data: normalizeData(data[i]),
+              header: `<h2>Chart #${i + 1}</h2>`,
+            }),
+          );
+        }
+
+        document.body.classList.add("dark");
         modeBtn.addEventListener("click", () => {
           dark = !dark;
 
@@ -54,7 +59,9 @@
             document.body.classList.add("dark");
           }
 
-          chart.updateTheme({ dark });
+          for (let i = 0; i < charts.length; i++) {
+            charts[i].updateTheme({ dark });
+          }
         });
       });
     </script>
