@@ -183,6 +183,10 @@ function easeInQuad(t) {
   return t * t;
 }
 
+function numberWithSpaces(x) {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
 function getScrollbarWidth() {
   const outer = document.createElement("div");
   outer.style.visibility = "hidden";

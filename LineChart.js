@@ -270,7 +270,7 @@ class LineChart {
       const rY = (0.5 + y) | 0;
 
       ctx.fillStyle = hexToRGB(labelColor, progress);
-      ctx.fillText(yScale[i], left, rY - 8);
+      ctx.fillText(numberWithSpaces(yScale[i]), left, rY - 8);
       ctx.strokeStyle = hexToRGB(gridLineColor, progress);
       ctx.lineWidth = 1 * devicePixelRatio;
       ctx.moveTo(left, rY);
@@ -1174,7 +1174,7 @@ class LineChart {
       if (type !== "x") {
         ctx.fillStyle = color;
         ctx.font = `bold ${valueFontPx}px ${font}`;
-        ctx.fillText(value, limitedX + textX - centerX, valueY);
+        ctx.fillText(numberWithSpaces(value), limitedX + textX - centerX, valueY);
         ctx.font = `normal ${chartFontPx}px ${font}`;
         ctx.fillText(chart, limitedX + textX - centerX, chartY);
       } else {
