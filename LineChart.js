@@ -65,7 +65,7 @@ class LineChart {
     this.ticks = 6;
     this.props = {};
     this.slideYAnimationEnd = true;
-    this.duration = 244;
+    this.duration = 144;
     this.lineLength =
       rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
 
@@ -145,6 +145,7 @@ class LineChart {
 
     this.drawYAxis();
     this.redraw({
+      data,
       panelX: this.panelX,
       panelW: this.panelW,
       from,
@@ -155,6 +156,7 @@ class LineChart {
   }
 
   redraw({
+    data,
     panelX,
     panelW,
     from = 0,
@@ -165,8 +167,9 @@ class LineChart {
     axialShift = 0,
     alpha = 1,
     lineLength = this.lineLength,
+    nextName,
   }) {
-    const { data, nodes, offset } = this;
+    const { nodes, offset } = this;
     const { bottom, top } = offset;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
@@ -186,11 +189,12 @@ class LineChart {
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
+      const { type, name } = item;
 
-      if (item.type === "line") {
+      if (type === "line") {
         // main canvas
         this.draw({
-          alpha,
+          alpha: name === nextName ? alpha : 1,
           axialShift,
           data: item,
           maxValue,
@@ -211,7 +215,7 @@ class LineChart {
         // preview canvas
         if (withPreview) {
           this.draw({
-            alpha,
+            alpha: name === nextName ? alpha : 1,
             top: 4,
             height: previewCanvasH,
             data: item,
@@ -269,8 +273,9 @@ class LineChart {
     ctx.restore();
   }
 
-  getGrab({ x, panelWidth, withoutMaxValue = false } = {}) {
-    const { nodes, lineLength, data, offset, devicePixelRatio, maxValue: prevMaxValue } = this;
+  getGrab({ x, panelWidth, withoutMaxValue = false, nextData } = {}) {
+    const { nodes, lineLength, offset, devicePixelRatio, maxValue: prevMaxValue } = this;
+    const data = nextData || this.data;
 
     const {
       previewCanvas: { node: previewCanvas },
@@ -466,19 +471,31 @@ class LineChart {
     container.node.appendChild(label);
   }
 
-  onDisabledLine(name) {
+  onChange(name, e) {
+    const {
+      panelX,
+      panelW,
+      maxValue: prevMaxValue,
+      lineLength,
+      data,
+      savedData,
+      slideYAnimationEnd,
+    } = this;
+
+    if (!slideYAnimationEnd) {
+      e.target.checked = !e.target.checked;
+      return;
+    }
+
     const isDisabled = this.disabledLines.some(item => item === name);
     if (isDisabled) {
+      // input.checked = !input.checked;
       this.disabledLines = this.disabledLines.filter(item => item !== name);
     } else {
+      // input.checked = !input.checked;
       this.disabledLines.push(name);
     }
-  }
 
-  onChange(name) {
-    const { panelX, panelW, maxValue: prevMaxValue, lineLength, data, savedData } = this;
-
-    this.onDisabledLine(name);
     const nextData = savedData.filter(({ name }) => !this.disabledLines.some(s => s === name));
 
     this.clearAllCanvases();
@@ -490,32 +507,29 @@ class LineChart {
       to: getDataMaxLength(nextData),
     });
 
-    this.data = nextData;
-
-    const { from, to, canvasWidth, maxValue: nextMaxValue } = this.getGrab({
+    const { from, to, maxValue: nextMaxValue } = this.getGrab({
+      nextData,
       x: panelX,
       panelWidth: panelW,
     });
 
-    const axialShift = getAxialShift(this.lineLength, from);
+    this.slide({
+      nextData,
+      deletion: !isDisabled,
+      nextName: name,
+      prevMaxValue,
+      nextMaxValue,
+      prevPreviewMaxValue,
+      nextPreviewMaxValue,
+      from,
+      to,
+      nextX: panelX,
+      panelW,
+      lineLength,
+      withPreview: true,
+    });
 
-    if (prevMaxValue !== nextMaxValue) {
-      this.slide({
-        prevMaxValue,
-        nextMaxValue,
-        prevPreviewMaxValue,
-        nextPreviewMaxValue,
-        from,
-        to,
-        nextX: panelX,
-        panelW,
-        lineLength,
-        withPreview: true,
-      });
-    } else {
-      this.drawYAxis({ max: prevMaxValue });
-      this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift, maxValue: prevMaxValue });
-    }
+    this.data = nextData;
   }
 
   clearAllCanvases() {
@@ -668,6 +682,7 @@ class LineChart {
   }
 
   slide({
+    nextData,
     prevMaxValue,
     nextMaxValue,
     prevPreviewMaxValue,
@@ -678,6 +693,9 @@ class LineChart {
     panelW,
     lineLength,
     withPreview = false,
+    name,
+    deletion,
+    nextName,
   } = {}) {
     const {
       data,
@@ -691,6 +709,8 @@ class LineChart {
       slideYAnimationEnd,
     } = this;
 
+    const dataForAnimation = deletion ? data : nextData;
+
     const axialShift = getAxialShift(lineLength, from);
 
     this.props = {
@@ -702,9 +722,8 @@ class LineChart {
       lineLength,
     };
 
-    if (prevMaxValue !== nextMaxValue && slideYAnimationEnd) {
+    if ((slideYAnimationEnd && prevMaxValue !== nextMaxValue) || (nextName && slideYAnimationEnd)) {
       const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
-
       this.slideYAnimationEnd = false;
       this.maxValue = nextMaxValue;
 
@@ -728,12 +747,19 @@ class LineChart {
           }
 
           const outProgress = 1 - progress;
-          // out
-          this.drawYAxis({ progress: outProgress, translateY: slideOut, max: prevMaxValue });
 
-          if (data.length > 1) {
-            // in
-            this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
+          if (prevMaxValue !== nextMaxValue) {
+            if (nextData.length > 1 && prevMaxValue !== nextMaxValue) {
+              // in
+              this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
+            }
+
+            if (data.length > 1 && prevMaxValue !== nextMaxValue) {
+              // out
+              this.drawYAxis({ progress: outProgress, translateY: slideOut, max: prevMaxValue });
+            }
+          } else {
+            this.drawYAxis();
           }
 
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
@@ -747,6 +773,9 @@ class LineChart {
           const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
           this.redraw({
+            nextName,
+            alpha: deletion ? outProgress : progress,
+            data: dataForAnimation,
             panelX,
             panelW,
             from,
@@ -767,11 +796,12 @@ class LineChart {
     } else {
       this.clearCanvas(canvas);
 
-      if (data.length > 1) {
+      if (dataForAnimation.length > 1) {
         this.drawYAxis();
       }
 
       this.redraw({
+        data: dataForAnimation,
         panelX: nextX,
         panelW: panelW,
         from,
@@ -785,6 +815,7 @@ class LineChart {
 
   handleMove(e) {
     const {
+      data,
       nodes,
       startPanelGrabbing,
       panelX,
@@ -824,6 +855,7 @@ class LineChart {
       this.lineLength = nextLineLength;
 
       this.slide({
+        nextData: data,
         prevMaxValue,
         nextMaxValue,
         from,
@@ -847,7 +879,16 @@ class LineChart {
         panelWidth: panelW,
       });
 
-      this.slide({ prevMaxValue, nextMaxValue, from, to, nextX, panelW, lineLength });
+      this.slide({
+        nextData: data,
+        prevMaxValue,
+        nextMaxValue,
+        from,
+        to,
+        nextX,
+        panelW,
+        lineLength,
+      });
     } else if (isNotAction) {
       previewCanvas.node.style.cursor = "default";
     }

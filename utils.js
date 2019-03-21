@@ -84,7 +84,7 @@ function normalizeData(data) {
   return normalizedData;
 }
 
-function getMaxValueFromTo({ data, from, to, top = 0 } = {}) {
+function getMaxValueFromTo({ data, from, to } = {}) {
   let max = 0;
 
   for (let i = 0; i < data.length; i++) {
