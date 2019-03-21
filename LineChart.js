@@ -733,18 +733,14 @@ class LineChart {
           this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
 
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
-          const slide =
-            direction < 0 ? prevMaxValue - diff * progress : prevMaxValue - diff * progress;
+          const slideY = prevMaxValue - diff * progress;
 
           const previewDiff =
             previewDirection < 0
               ? prevPreviewMaxValue - nextPreviewMaxValue
               : -(nextPreviewMaxValue - prevPreviewMaxValue);
 
-          const slidePreview =
-            previewDirection < 0
-              ? prevPreviewMaxValue - previewDiff * progress
-              : prevPreviewMaxValue - previewDiff * progress;
+          const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
           this.redraw({
             panelX,
@@ -752,8 +748,8 @@ class LineChart {
             from,
             to,
             withPreview,
-            maxValue: slide,
-            previewMaxValue: slidePreview,
+            maxValue: slideY,
+            previewMaxValue: slideYPreview,
             axialShift,
             lineLength,
           });
@@ -903,7 +899,6 @@ class LineChart {
   handleMoveInChart(e) {
     const {
       data,
-      disabledLines,
       devicePixelRatio,
       lineLength,
       panelX,
