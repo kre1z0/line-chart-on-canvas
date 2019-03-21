@@ -1,4 +1,4 @@
-##Telegram official coding competition for Android, iOS and JS developers
+#Telegram official coding competition for Android, iOS and JS developers
 
 ```demo``` - https://kre1z0.github.io/line-chart-on-canvas
 
