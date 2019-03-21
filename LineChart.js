@@ -82,6 +82,7 @@ class LineChart {
     this.resizeNodes();
     this.overdraw();
     this.setListeners();
+    this.handleResize();
   }
 
   animate({ duration = 144, timing, draw }) {
@@ -585,24 +586,23 @@ class LineChart {
 
   resizeNodes() {
     const { nodes, devicePixelRatio } = this;
-
+    const scrollbarWidth = getScrollbarWidth();
     let container = null;
 
     for (let key in nodes) {
       const { node, height, backNode } = nodes[key];
-
       if (key !== "container" && container) {
         const { width } = container.getBoundingClientRect();
 
-        node.style.width = width + "px";
+        node.style.width = width - scrollbarWidth + "px";
         node.style.height = height + "px";
-        node.setAttribute("width", width * devicePixelRatio);
+        node.setAttribute("width", (width - scrollbarWidth) * devicePixelRatio);
         node.setAttribute("height", height * devicePixelRatio);
 
         if (backNode) {
-          backNode.style.width = width + "px";
+          backNode.style.width = width - scrollbarWidth + "px";
           backNode.style.height = height + "px";
-          backNode.setAttribute("width", width * devicePixelRatio);
+          backNode.setAttribute("width", (width - scrollbarWidth) * devicePixelRatio);
           backNode.setAttribute("height", height * devicePixelRatio);
         }
       } else {
