@@ -100,8 +100,9 @@ function getMaxValueFromTo({ data, from, to }) {
       }
     }
   }
-
+  console.info("--> clear ggwp 4444", max);
   const maxLength = Math.ceil(Math.log10(max + 1));
+  console.info("--> ceiled ggwp 4444", Math.ceil(roundUsing(max, Math.ceil, -maxLength + 1)));
   return Math.ceil(roundUsing(max, Math.ceil, -maxLength + 1));
 }
 

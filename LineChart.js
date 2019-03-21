@@ -261,8 +261,15 @@ class LineChart {
     ctx.restore();
   }
 
-  getGrab({ x, panelWidth }) {
-    const { nodes, lineLength, disabledLines, offset, devicePixelRatio } = this;
+  getGrab({ x, panelWidth, withoutMaxValue = false } = {}) {
+    const {
+      nodes,
+      lineLength,
+      disabledLines,
+      offset,
+      devicePixelRatio,
+      maxValue: prevMaxValue,
+    } = this;
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const {
       previewCanvas: { node: previewCanvas },
@@ -279,7 +286,12 @@ class LineChart {
       0,
       lines + 1,
     );
-    const maxValue = getMaxValueFromTo({ data, from, to });
+
+    let maxValue = prevMaxValue;
+
+    if (!withoutMaxValue) {
+      maxValue = getMaxValueFromTo({ data, from, to });
+    }
 
     const limit = to === 0 ? [1, 2] : [lines - 1, 0];
 
@@ -839,7 +851,7 @@ class LineChart {
 
     const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { x } = getPosition(e, devicePixelRatio);
-    const { from } = this.getGrab({ x: panelX, panelWidth: panelW });
+    const { from } = this.getGrab({ x: panelX, panelWidth: panelW, withoutMaxValue: true });
     const index = rateLimit(
       Math.floor((x - left * devicePixelRatio) / lineLength + from),
       0,
