@@ -680,6 +680,7 @@ class LineChart {
     withPreview = false,
   } = {}) {
     const {
+      data,
       offset,
       devicePixelRatio,
       ticks,
@@ -729,8 +730,11 @@ class LineChart {
           const outProgress = 1 - progress;
           // out
           this.drawYAxis({ progress: outProgress, translateY: slideOut, max: prevMaxValue });
-          // in
-          this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
+
+          if (data.length > 1) {
+            // in
+            this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
+          }
 
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
           const slideY = prevMaxValue - diff * progress;
@@ -762,7 +766,11 @@ class LineChart {
       });
     } else {
       this.clearCanvas(canvas);
-      this.drawYAxis();
+
+      if (data.length > 1) {
+        this.drawYAxis();
+      }
+
       this.redraw({
         panelX: nextX,
         panelW: panelW,
