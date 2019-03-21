@@ -230,7 +230,7 @@ class LineChart {
             previewMaxValue:
               previewMaxValue || getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
             canvas: previewCanvas,
-            lineLength: this.lineLengthPreviewCanvas,
+            lineLength: this.lineLengthPreviewCanvas - 1 / (getDataMaxLength(data) - 1),
             lineWidth: previewLineWidth,
           });
         }
