@@ -624,12 +624,16 @@ class LineChart {
     previewCanvas.addEventListener("touchstart", this.handleDown.bind(this));
     document.addEventListener("mouseup", this.handleUp.bind(this));
     document.addEventListener("touchend", this.handleUp.bind(this));
-    window.addEventListener("resize", this.handleResize.bind(this));
     canvas.addEventListener("mousemove", this.handleMoveInChart.bind(this));
     canvas.addEventListener("touchmove", this.handleMoveInChart.bind(this));
     canvas.addEventListener("mouseleave", this.handleLeaveChart.bind(this));
     canvas.addEventListener("touchstart", this.handleMoveInChart.bind(this));
     canvas.addEventListener("touchend", this.handleLeaveChart.bind(this));
+    if (window.orientation > -1) {
+      window.addEventListener("orientationchange", this.handleResize.bind(this));
+    } else {
+      window.addEventListener("resize", this.handleResize.bind(this));
+    }
   }
 
   clearCanvas(canvas) {
