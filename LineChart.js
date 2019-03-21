@@ -63,6 +63,7 @@ class LineChart {
     this.lineLengthPreviewCanvas = 0;
     this.ticks = 6;
     this.props = {};
+    this.slideYAnimationEnd = true;
     this.duration = 244;
     this.lineLength =
       rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
@@ -638,6 +639,7 @@ class LineChart {
       nodes: {
         canvas: { node: canvas },
       },
+      slideYAnimationEnd,
     } = this;
 
     const axialShift = getAxialShift(lineLength, from);
@@ -651,9 +653,10 @@ class LineChart {
       lineLength,
     };
 
-    if (prevMaxValue !== nextMaxValue) {
+    if (prevMaxValue !== nextMaxValue && slideYAnimationEnd) {
       const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
 
+      this.slideYAnimationEnd = false;
       this.maxValue = nextMaxValue;
 
       const gridH = (canvasHeight - offset.bottom * devicePixelRatio) / ticks / 2;
@@ -691,6 +694,7 @@ class LineChart {
           });
 
           if (progress >= 1) {
+            this.slideYAnimationEnd = true;
             this.props = {};
           }
         },
