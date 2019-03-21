@@ -32,6 +32,7 @@ class LineChart {
     const container = document.createElement("div");
     container.classList.add(`${this.classNamePrefix}-${dark ? "dark" : "light"}`);
 
+    this.savedData = data;
     this.data = data;
     this.root = root;
     this.header = header;
@@ -116,6 +117,7 @@ class LineChart {
     }
 
     if (data) {
+      this.savedData = data;
       this.data = data;
     }
     this.clearAllCanvases();
@@ -123,11 +125,10 @@ class LineChart {
   }
 
   overdraw() {
-    const { nodes, lineLength, disabledLines } = this;
+    const { nodes, lineLength, data } = this;
     const {
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
 
     const { width: previewCanvasW } = this.getWithHeigthByRatio(previewCanvas);
     this.panelW = this.getPanelWidth();
@@ -157,14 +158,15 @@ class LineChart {
     panelX,
     panelW,
     from = 0,
-    to,
+    to = 1,
     withPreview = true,
     maxValue,
+    previewMaxValue,
     axialShift = 0,
     alpha = 1,
     lineLength = this.lineLength,
   }) {
-    const { disabledLines, nodes, offset } = this;
+    const { data, nodes, offset } = this;
     const { bottom, top } = offset;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
@@ -178,7 +180,6 @@ class LineChart {
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
     const { height: previewCanvasH } = this.getWithHeigthByRatio(previewCanvas);
 
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const labels = data[0].labels;
 
     let labelsIsDrawn = false;
@@ -211,9 +212,11 @@ class LineChart {
         if (withPreview) {
           this.draw({
             alpha,
+            top: 4,
             height: previewCanvasH,
             data: item,
-            maxValue: getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
+            previewMaxValue:
+              previewMaxValue || getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
             canvas: previewCanvas,
             lineLength: this.lineLengthPreviewCanvas,
             lineWidth: previewLineWidth,
@@ -267,15 +270,8 @@ class LineChart {
   }
 
   getGrab({ x, panelWidth, withoutMaxValue = false } = {}) {
-    const {
-      nodes,
-      lineLength,
-      disabledLines,
-      offset,
-      devicePixelRatio,
-      maxValue: prevMaxValue,
-    } = this;
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
+    const { nodes, lineLength, data, offset, devicePixelRatio, maxValue: prevMaxValue } = this;
+
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
@@ -325,6 +321,7 @@ class LineChart {
   draw({
     data,
     maxValue,
+    previewMaxValue,
     canvas,
     height,
     lineLength,
@@ -374,7 +371,7 @@ class LineChart {
         ((left + roundLineCap) * devicePixelRatio - axialShift) -
         1 * devicePixelRatio;
 
-      const y = h - (values[i] / maxValue) * h + top * devicePixelRatio;
+      const y = h - (values[i] / (maxValue || previewMaxValue)) * h + top * devicePixelRatio;
 
       const rX = (0.5 + x) | 0;
       const rY = (0.5 + y) | 0;
@@ -389,7 +386,10 @@ class LineChart {
           ctx.beginPath();
           for (let index = 0; index < items.length; index++) {
             const x1 = x - lineLength * (index + 1);
-            const y1 = h - (values[i - (index + 1)] / maxValue) * h + top * devicePixelRatio;
+            const y1 =
+              h -
+              (values[i - (index + 1)] / (maxValue || previewMaxValue)) * h +
+              top * devicePixelRatio;
 
             if (index === 0) {
               ctx.lineTo(extraX, extraY);
@@ -466,15 +466,56 @@ class LineChart {
     container.node.appendChild(label);
   }
 
+  onDisabledLine(name) {
+    const isDisabled = this.disabledLines.some(item => item === name);
+    if (isDisabled) {
+      this.disabledLines = this.disabledLines.filter(item => item !== name);
+    } else {
+      this.disabledLines.push(name);
+    }
+  }
+
   onChange(name) {
-    const { panelX, panelW } = this;
+    const { panelX, panelW, maxValue: prevMaxValue, lineLength, data, savedData } = this;
+
+    this.onDisabledLine(name);
+    const nextData = savedData.filter(({ name }) => !this.disabledLines.some(s => s === name));
 
     this.clearAllCanvases();
-    this.onDisabledLine(name);
-    const { from, to, canvasWidth, maxValue } = this.getGrab({ x: panelX, panelWidth: panelW });
+
+    const prevPreviewMaxValue = getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) });
+    const nextPreviewMaxValue = getMaxValueFromTo({
+      data: nextData,
+      from: 0,
+      to: getDataMaxLength(nextData),
+    });
+
+    this.data = nextData;
+
+    const { from, to, canvasWidth, maxValue: nextMaxValue } = this.getGrab({
+      x: panelX,
+      panelWidth: panelW,
+    });
+
     const axialShift = getAxialShift(this.lineLength, from);
-    this.drawYAxis({ max: maxValue });
-    this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift, maxValue });
+
+    if (prevMaxValue !== nextMaxValue) {
+      this.slide({
+        prevMaxValue,
+        nextMaxValue,
+        prevPreviewMaxValue,
+        nextPreviewMaxValue,
+        from,
+        to,
+        nextX: panelX,
+        panelW,
+        lineLength,
+        withPreview: true,
+      });
+    } else {
+      this.drawYAxis({ max: prevMaxValue });
+      this.redraw({ panelX, panelW, from, to, canvasWidth, axialShift, maxValue: prevMaxValue });
+    }
   }
 
   clearAllCanvases() {
@@ -486,16 +527,6 @@ class LineChart {
         this.clearCanvas(node);
         this.clearCanvas(backNode);
       }
-    }
-  }
-
-  onDisabledLine(name) {
-    const isDisabled = this.disabledLines.some(item => item === name);
-
-    if (isDisabled) {
-      this.disabledLines = this.disabledLines.filter(item => item !== name);
-    } else {
-      this.disabledLines.push(name);
     }
   }
 
@@ -636,13 +667,23 @@ class LineChart {
     };
   }
 
-  slide({ nextMaxValue, from, to, nextX, panelW, lineLength } = {}) {
+  slide({
+    prevMaxValue,
+    nextMaxValue,
+    prevPreviewMaxValue,
+    nextPreviewMaxValue,
+    from,
+    to,
+    nextX,
+    panelW,
+    lineLength,
+    withPreview = false,
+  } = {}) {
     const {
       offset,
       devicePixelRatio,
       ticks,
       duration,
-      maxValue: prevMaxValue,
       nodes: {
         canvas: { node: canvas },
       },
@@ -675,27 +716,44 @@ class LineChart {
           const { panelX, panelW, lineLength, from, to, axialShift } = props;
 
           const direction = prevMaxValue < nextMaxValue ? 1 : -1;
+          const previewDirection = prevPreviewMaxValue < nextPreviewMaxValue ? 1 : -1;
           const slideOut = direction < 0 ? gridH * progress : -gridH * progress;
           const slideIn = direction < 0 ? -gridH + gridH * progress : gridH - gridH * progress;
 
-          this.clearCanvas(canvas);
+          if (withPreview) {
+            this.clearAllCanvases();
+          } else {
+            this.clearCanvas(canvas);
+          }
 
           const outProgress = 1 - progress;
           // out
           this.drawYAxis({ progress: outProgress, translateY: slideOut, max: prevMaxValue });
           // in
           this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
+
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
           const slide =
             direction < 0 ? prevMaxValue - diff * progress : prevMaxValue - diff * progress;
+
+          const previewDiff =
+            previewDirection < 0
+              ? prevPreviewMaxValue - nextPreviewMaxValue
+              : -(nextPreviewMaxValue - prevPreviewMaxValue);
+
+          const slidePreview =
+            previewDirection < 0
+              ? prevPreviewMaxValue - previewDiff * progress
+              : prevPreviewMaxValue - previewDiff * progress;
 
           this.redraw({
             panelX,
             panelW,
             from,
             to,
-            withPreview: false,
+            withPreview,
             maxValue: slide,
+            previewMaxValue: slidePreview,
             axialShift,
             lineLength,
           });
@@ -730,6 +788,7 @@ class LineChart {
       lineLength,
       startPanelResize,
       devicePixelRatio,
+      maxValue: prevMaxValue,
     } = this;
     const { previewCanvas } = nodes;
     const {
@@ -761,6 +820,7 @@ class LineChart {
       this.lineLength = nextLineLength;
 
       this.slide({
+        prevMaxValue,
         nextMaxValue,
         from,
         to,
@@ -783,7 +843,7 @@ class LineChart {
         panelWidth: panelW,
       });
 
-      this.slide({ nextMaxValue, from, to, nextX, panelW, lineLength });
+      this.slide({ prevMaxValue, nextMaxValue, from, to, nextX, panelW, lineLength });
     } else if (isNotAction) {
       previewCanvas.node.style.cursor = "default";
     }
@@ -842,6 +902,7 @@ class LineChart {
 
   handleMoveInChart(e) {
     const {
+      data,
       disabledLines,
       devicePixelRatio,
       lineLength,
@@ -860,7 +921,6 @@ class LineChart {
       return;
     }
 
-    const data = this.data.filter(({ name }) => !disabledLines.some(s => s === name));
     const { x } = getPosition(e, devicePixelRatio);
     const { from } = this.getGrab({ x: panelX, panelWidth: panelW, withoutMaxValue: true });
     const index = rateLimit(
