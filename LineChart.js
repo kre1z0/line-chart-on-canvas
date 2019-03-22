@@ -494,10 +494,8 @@ class LineChart {
 
     const isDisabled = this.disabledLines.some(item => item === name);
     if (isDisabled) {
-      // input.checked = !input.checked;
       this.disabledLines = this.disabledLines.filter(item => item !== name);
     } else {
-      // input.checked = !input.checked;
       this.disabledLines.push(name);
     }
 
