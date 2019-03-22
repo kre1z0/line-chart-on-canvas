@@ -215,3 +215,15 @@ function getLabelDivider(width, lineLength) {
   const diff = Math.ceil(width / lineLength);
   return geometricProgression(rateLimit(diff, 1));
 }
+
+function debounce(func, interval) {
+  let timer = null;
+  return function() {
+    if (timer) clearTimeout(timer);
+    let args = arguments;
+    timer = window.setTimeout(() => {
+      timer = null;
+      func.apply(this, args);
+    }, interval);
+  };
+}

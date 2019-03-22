@@ -37,7 +37,7 @@ class LineChart {
     this.root = root;
     this.header = header;
     this.offset = { left: 20, right: 20, bottom: 44, top: 24, ...offset };
-    this.labelWidthLimit = 110 * devicePixelRatio;
+    this.labelWidthLimit = 64 * devicePixelRatio;
     this.nodes = {
       container: {
         node: container,
@@ -65,7 +65,6 @@ class LineChart {
     this.lineLengthPreviewCanvas = 0;
     this.ticks = 6;
     this.props = {};
-    this.slideYAnimationEnd = true;
     this.duration = 144;
     this.lineLength = rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
     this.labelDivider = getLabelDivider(this.labelWidthLimit, this.lineLength);
@@ -373,7 +372,7 @@ class LineChart {
     const drawFirstLabel = from * lineLength - labelWidthLimit < firstLabelWidth;
     const divider = nextLabelDivider || labelDivider;
     const remainderFrom = fromInt % divider;
-    const skipLabel = rateLimit((divider - 1) * lineLength, lineLength) < labelWidthLimit;
+    const skipLabel = rateLimit((divider - 2) * lineLength, lineLength) <= labelWidthLimit;
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
@@ -421,15 +420,18 @@ class LineChart {
         }
         ctx.fillStyle = labelColor;
 
-        if (startIndex === 0 && drawFirstLabel && !skipLabel) {
-          ctx.textAlign = "left";
-          ctx.fillText(labels[0], rX - lineLength * fromInt, lRY);
-        }
+        // if (startIndex === 0 && drawFirstLabel && !skipLabel) {
+        //   ctx.textAlign = "left";
+        //   ctx.fillText(labels[0], rX - lineLength * fromInt, lRY);
+        // }
+
+        const prevI = i + divider - 1 - divider;
+        const nextI = i + divider - 1;
 
         if ((divider > 1 && remainderFrom + remainderIndex === divider - 1) || divider === 1) {
           ctx.fillText(label, rX, lRY);
-        } else {
-          console.info("--> ggwp ii");
+        } else if (startIndex === 0) {
+          const ggwp = rX - lineLength;
         }
 
         ctx.restore();
@@ -447,7 +449,7 @@ class LineChart {
 
       ctx.stroke();
       startIndex += 1;
-      if (Math.ceil(to - 1) < i) {
+      if (Math.ceil(to + 2) < i) {
         break;
       }
     }
@@ -475,13 +477,8 @@ class LineChart {
     container.node.appendChild(label);
   }
 
-  onChange(name, e) {
-    const { panelX, panelW, maxValue: prevMaxValue, lineLength, data, savedData, slideYAnimationEnd } = this;
-
-    if (!slideYAnimationEnd) {
-      e.target.checked = !e.target.checked;
-      return;
-    }
+  onChange(name) {
+    const { panelX, panelW, maxValue: prevMaxValue, lineLength, data, savedData } = this;
 
     const isDisabled = this.disabledLines.some(item => item === name);
     if (isDisabled) {
@@ -717,7 +714,7 @@ class LineChart {
       nodes: {
         canvas: { node: canvas },
       },
-      slideYAnimationEnd,
+      labelDivider: prevLabelDivider,
     } = this;
 
     const dataForAnimation = deletion ? data : nextData;
@@ -733,10 +730,14 @@ class LineChart {
       lineLength,
     };
 
-    if ((slideYAnimationEnd && prevMaxValue !== nextMaxValue) || (nextName && slideYAnimationEnd)) {
+    const maxValueIsChanged = prevMaxValue !== nextMaxValue;
+    const chartsDataIsChanged = nextName;
+    const labelIsChanged = nextLabelDivider && prevLabelDivider !== nextLabelDivider;
+
+    if (maxValueIsChanged || chartsDataIsChanged || labelIsChanged) {
       const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
-      this.slideYAnimationEnd = false;
       this.maxValue = nextMaxValue;
+      this.labelDivider = nextLabelDivider;
 
       const gridH = (canvasHeight - offset.bottom * devicePixelRatio) / ticks / 2;
 
@@ -795,11 +796,6 @@ class LineChart {
             axialShift,
             lineLength,
           });
-
-          if (progress >= 1) {
-            this.slideYAnimationEnd = true;
-            this.props = {};
-          }
         },
       });
     } else {
@@ -810,7 +806,6 @@ class LineChart {
       }
 
       this.redraw({
-        nextLabelDivider,
         data: dataForAnimation,
         panelX: nextX,
         panelW: panelW,
@@ -835,6 +830,7 @@ class LineChart {
       startPanelResize,
       devicePixelRatio,
       maxValue: prevMaxValue,
+      labelDivider: prevLabelDivider,
     } = this;
 
     const { previewCanvas } = nodes;
@@ -893,6 +889,7 @@ class LineChart {
       });
 
       this.slide({
+        nextLabelDivider: prevLabelDivider,
         nextData: data,
         prevMaxValue,
         nextMaxValue,
