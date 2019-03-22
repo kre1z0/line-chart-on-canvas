@@ -187,6 +187,10 @@ function numberWithSpaces(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
+function geometricProgression(n) {
+  return 1 * Math.pow(2, Math.ceil(Math.log2(n)));
+}
+
 function getScrollbarWidth() {
   const outer = document.createElement("div");
   outer.style.visibility = "hidden";

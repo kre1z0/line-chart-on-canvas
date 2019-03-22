@@ -373,9 +373,11 @@ class LineChart {
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;
 
-    const labelWidth = 100;
+    const labelWidth = 110;
     const fromInt = Math.floor(from);
-    const divider = rateLimit(Math.round(labelWidth / lineLength), 1);
+    const divider = geometricProgression(rateLimit(Math.round(labelWidth / lineLength), 1));
+
+    const remainderFrom = fromInt % divider;
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
@@ -416,7 +418,6 @@ class LineChart {
 
       if (!labelsIsDrawn) {
         const label = labels[i];
-        const remainderFrom = fromInt % divider;
         const remainderIndex = startIndex % divider;
         const lastLabel = startIndex === values.length - fromInt - 1;
 
@@ -428,13 +429,10 @@ class LineChart {
         }
         ctx.fillStyle = labelColor;
 
-        if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
-          console.info("--> ggwp 4444 1", startIndex);
-          ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
-        } else if (divider === 1) {
-          console.info("--> ggwp 4444 2", startIndex);
+        if ((divider > 1 && remainderFrom + remainderIndex === divider - 1) || divider === 1) {
           ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
         }
+
         ctx.restore();
       }
 
@@ -450,7 +448,7 @@ class LineChart {
 
       ctx.stroke();
       startIndex += 1;
-      if (Math.ceil(to + 2) < i) {
+      if (Math.ceil(to - 1) < i) {
         break;
       }
     }
