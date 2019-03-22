@@ -366,16 +366,11 @@ class LineChart {
 
     const firstLabelWidth = ctx.measureText(labels[0]).width;
     const fromInt = Math.floor(from);
-    const bias = 1;
     const drawFirstLabel = from * lineLength - labelWidthLimit < firstLabelWidth;
     const diffLabel = Math.ceil(labelWidthLimit / lineLength);
-    if (!labelsIsDrawn) {
-      console.info("--> ggwp 4444", diffLabel);
-    }
-
     const divider = geometricProgression(rateLimit(diffLabel, 1));
-
     const remainderFrom = fromInt % divider;
+    const skipLabel = rateLimit((divider - 1) * lineLength, lineLength) < labelWidthLimit;
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
@@ -423,7 +418,7 @@ class LineChart {
         }
         ctx.fillStyle = labelColor;
 
-        if (startIndex === 0 && drawFirstLabel) {
+        if (startIndex === 0 && drawFirstLabel && !skipLabel) {
           ctx.textAlign = "left";
           ctx.fillText(labels[0], rX - lineLength * fromInt, lRY);
         }
