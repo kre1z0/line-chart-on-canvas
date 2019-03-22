@@ -727,7 +727,6 @@ class LineChart {
       nodes: {
         canvas: { node: canvas },
       },
-      slideYAnimationEnd,
     } = this;
 
     const dataForAnimation = deletion ? data : nextData;
@@ -743,7 +742,7 @@ class LineChart {
       lineLength,
     };
 
-    if ((slideYAnimationEnd && prevMaxValue !== nextMaxValue) || (nextName && slideYAnimationEnd)) {
+    if (prevMaxValue !== nextMaxValue || nextName) {
       const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
       this.slideYAnimationEnd = false;
       this.maxValue = nextMaxValue;
