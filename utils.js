@@ -210,3 +210,8 @@ function getScrollbarWidth() {
 
   return widthNoScroll - widthWithScroll;
 }
+
+function getLabelDivider(width, lineLength) {
+  const diff = Math.ceil(width / lineLength);
+  return geometricProgression(rateLimit(diff, 1));
+}

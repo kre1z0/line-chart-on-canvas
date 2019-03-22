@@ -68,7 +68,7 @@ class LineChart {
     this.slideYAnimationEnd = true;
     this.duration = 144;
     this.lineLength = rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
-
+    this.labelDivider = getLabelDivider(this.labelWidthLimit, this.lineLength);
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
     this.selectedItem = null;
@@ -176,6 +176,7 @@ class LineChart {
     alpha = 1,
     lineLength = this.lineLength,
     nextName,
+    nextLabelDivider,
   }) {
     const { nodes, offset } = this;
     const { bottom, top } = offset;
@@ -198,6 +199,7 @@ class LineChart {
       if (type === "line") {
         // main canvas
         this.draw({
+          nextLabelDivider,
           alpha: name === nextName ? alpha : 1,
           axialShift,
           data: item,
@@ -335,6 +337,7 @@ class LineChart {
     labels = [],
     alpha,
     labelsIsDrawn = true,
+    nextLabelDivider,
   } = {}) {
     const {
       font,
@@ -342,6 +345,7 @@ class LineChart {
       devicePixelRatio,
       theme: { labelColor },
       labelWidthLimit,
+      labelDivider,
     } = this;
     const { values, color } = data;
     const { left } = offset;
@@ -367,8 +371,7 @@ class LineChart {
     const firstLabelWidth = ctx.measureText(labels[0]).width;
     const fromInt = Math.floor(from);
     const drawFirstLabel = from * lineLength - labelWidthLimit < firstLabelWidth;
-    const diffLabel = Math.ceil(labelWidthLimit / lineLength);
-    const divider = geometricProgression(rateLimit(diffLabel, 1));
+    const divider = nextLabelDivider || labelDivider;
     const remainderFrom = fromInt % divider;
     const skipLabel = rateLimit((divider - 1) * lineLength, lineLength) < labelWidthLimit;
 
@@ -425,6 +428,8 @@ class LineChart {
 
         if ((divider > 1 && remainderFrom + remainderIndex === divider - 1) || divider === 1) {
           ctx.fillText(label, rX, lRY);
+        } else {
+          console.info("--> ggwp ii");
         }
 
         ctx.restore();
@@ -701,6 +706,7 @@ class LineChart {
     name,
     deletion,
     nextName,
+    nextLabelDivider,
   } = {}) {
     const {
       data,
@@ -775,6 +781,7 @@ class LineChart {
           const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
           this.redraw({
+            nextLabelDivider,
             nextName,
             alpha: deletion ? outProgress : progress,
             data: dataForAnimation,
@@ -803,6 +810,7 @@ class LineChart {
       }
 
       this.redraw({
+        nextLabelDivider,
         data: dataForAnimation,
         panelX: nextX,
         panelW: panelW,
@@ -816,7 +824,18 @@ class LineChart {
   }
 
   handleMove(e) {
-    const { data, nodes, startPanelGrabbing, panelX, panelW, lineLength, startPanelResize, devicePixelRatio, maxValue: prevMaxValue } = this;
+    const {
+      data,
+      labelWidthLimit,
+      nodes,
+      startPanelGrabbing,
+      panelX,
+      panelW,
+      lineLength,
+      startPanelResize,
+      devicePixelRatio,
+      maxValue: prevMaxValue,
+    } = this;
 
     const { previewCanvas } = nodes;
     const {
@@ -844,10 +863,11 @@ class LineChart {
       const { from, to, maxValue: nextMaxValue } = this.getGrab({ x: pX, panelWidth: pW });
 
       const nextLineLength = canvasWidth / (to - from);
-
       this.lineLength = nextLineLength;
+      const nextLabelDivider = getLabelDivider(labelWidthLimit, nextLineLength);
 
       this.slide({
+        nextLabelDivider,
         nextData: data,
         prevMaxValue,
         nextMaxValue,
