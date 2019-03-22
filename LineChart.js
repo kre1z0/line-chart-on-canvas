@@ -373,7 +373,7 @@ class LineChart {
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;
 
-    const labelWidth = 140;
+    const labelWidth = 100;
     const fromInt = Math.floor(from);
     const divider = rateLimit(Math.round(labelWidth / lineLength), 1);
 
@@ -429,8 +429,10 @@ class LineChart {
         ctx.fillStyle = labelColor;
 
         if (divider > 1 && remainderFrom + remainderIndex === divider - 1) {
+          console.info("--> ggwp 4444 1", startIndex);
           ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
         } else if (divider === 1) {
+          console.info("--> ggwp 4444 2", startIndex);
           ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
         }
         ctx.restore();
@@ -725,6 +727,7 @@ class LineChart {
       nodes: {
         canvas: { node: canvas },
       },
+      slideYAnimationEnd,
     } = this;
 
     const dataForAnimation = deletion ? data : nextData;
@@ -740,7 +743,7 @@ class LineChart {
       lineLength,
     };
 
-    if (prevMaxValue !== nextMaxValue || nextName) {
+    if ((slideYAnimationEnd && prevMaxValue !== nextMaxValue) || (nextName && slideYAnimationEnd)) {
       const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
       this.slideYAnimationEnd = false;
       this.maxValue = nextMaxValue;
