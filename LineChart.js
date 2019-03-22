@@ -37,6 +37,7 @@ class LineChart {
     this.root = root;
     this.header = header;
     this.offset = { left: 20, right: 20, bottom: 44, top: 24, ...offset };
+    this.labelWidthLimit = 110 * devicePixelRatio;
     this.nodes = {
       container: {
         node: container,
@@ -66,8 +67,7 @@ class LineChart {
     this.props = {};
     this.slideYAnimationEnd = true;
     this.duration = 144;
-    this.lineLength =
-      rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
+    this.lineLength = rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
 
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
@@ -181,11 +181,7 @@ class LineChart {
     const { bottom, top } = offset;
     const {
       canvas: { node: canvas, lineWidth: canvasLineWidth },
-      previewCanvas: {
-        node: previewCanvas,
-        backNode: previewBackNode,
-        lineWidth: previewLineWidth,
-      },
+      previewCanvas: { node: previewCanvas, backNode: previewBackNode, lineWidth: previewLineWidth },
     } = nodes;
 
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
@@ -227,8 +223,7 @@ class LineChart {
             top: 4,
             height: previewCanvasH,
             data: item,
-            previewMaxValue:
-              previewMaxValue || getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
+            previewMaxValue: previewMaxValue || getMaxValueFromTo({ data, from: 0, to: getDataMaxLength(data) }),
             canvas: previewCanvas,
             lineLength: this.lineLengthPreviewCanvas - 1 / (getDataMaxLength(data) - 1),
             lineWidth: previewLineWidth,
@@ -263,10 +258,7 @@ class LineChart {
     ctx.font = `${textPx}px ${font}`;
 
     for (let i = 0; i < yScale.length; i++) {
-      const y =
-        i !== 0
-          ? h - i * (h / ticks) - 0.5 - translateY + +offset.top * devicePixelRatio
-          : h - 0.5 + offset.top * devicePixelRatio;
+      const y = i !== 0 ? h - i * (h / ticks) - 0.5 - translateY + +offset.top * devicePixelRatio : h - 0.5 + offset.top * devicePixelRatio;
       const rY = (0.5 + y) | 0;
 
       ctx.fillStyle = hexToRGB(labelColor, progress);
@@ -295,11 +287,7 @@ class LineChart {
     const ratio = canvasWidth / previewCanvasW;
 
     const from = rateLimit((x * ratio) / (lineLength * devicePixelRatio), 0);
-    const to = rateLimit(
-      (x * ratio + panelWidth * ratio) / (lineLength * devicePixelRatio),
-      0,
-      lines + 1,
-    );
+    const to = rateLimit((x * ratio + panelWidth * ratio) / (lineLength * devicePixelRatio), 0, lines + 1);
 
     let maxValue = prevMaxValue;
 
@@ -353,6 +341,7 @@ class LineChart {
       offset,
       devicePixelRatio,
       theme: { labelColor },
+      labelWidthLimit,
     } = this;
     const { values, color } = data;
     const { left } = offset;
@@ -372,10 +361,19 @@ class LineChart {
 
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;
+    const lY = h + (bottom / 2 + top) * devicePixelRatio;
+    const lRY = (0.5 + lY) | 0;
 
-    const labelWidth = 110;
+    const firstLabelWidth = ctx.measureText(labels[0]).width;
     const fromInt = Math.floor(from);
-    const divider = geometricProgression(rateLimit(Math.round(labelWidth / lineLength), 1));
+    const bias = 1;
+    const drawFirstLabel = from * lineLength - labelWidthLimit < firstLabelWidth;
+    const diffLabel = Math.ceil(labelWidthLimit / lineLength);
+    if (!labelsIsDrawn) {
+      console.info("--> ggwp 4444", diffLabel);
+    }
+
+    const divider = geometricProgression(rateLimit(diffLabel, 1));
 
     const remainderFrom = fromInt % divider;
 
@@ -398,10 +396,7 @@ class LineChart {
           ctx.beginPath();
           for (let index = 0; index < items.length; index++) {
             const x1 = x - lineLength * (index + 1);
-            const y1 =
-              h -
-              (values[i - (index + 1)] / (maxValue || previewMaxValue)) * h +
-              top * devicePixelRatio;
+            const y1 = h - (values[i - (index + 1)] / (maxValue || previewMaxValue)) * h + top * devicePixelRatio;
 
             if (index === 0) {
               ctx.lineTo(extraX, extraY);
@@ -411,7 +406,6 @@ class LineChart {
             extraX = x1;
             extraY = y1;
           }
-
           ctx.stroke();
         }
       }
@@ -429,8 +423,13 @@ class LineChart {
         }
         ctx.fillStyle = labelColor;
 
+        if (startIndex === 0 && drawFirstLabel) {
+          ctx.textAlign = "left";
+          ctx.fillText(labels[0], rX - lineLength * fromInt, lRY);
+        }
+
         if ((divider > 1 && remainderFrom + remainderIndex === divider - 1) || divider === 1) {
-          ctx.fillText(label, x, h + (bottom / 2 + top) * devicePixelRatio);
+          ctx.fillText(label, rX, lRY);
         }
 
         ctx.restore();
@@ -477,15 +476,7 @@ class LineChart {
   }
 
   onChange(name, e) {
-    const {
-      panelX,
-      panelW,
-      maxValue: prevMaxValue,
-      lineLength,
-      data,
-      savedData,
-      slideYAnimationEnd,
-    } = this;
+    const { panelX, panelW, maxValue: prevMaxValue, lineLength, data, savedData, slideYAnimationEnd } = this;
 
     if (!slideYAnimationEnd) {
       e.target.checked = !e.target.checked;
@@ -784,10 +775,7 @@ class LineChart {
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
           const slideY = prevMaxValue - diff * progress;
 
-          const previewDiff =
-            previewDirection < 0
-              ? prevPreviewMaxValue - nextPreviewMaxValue
-              : -(nextPreviewMaxValue - prevPreviewMaxValue);
+          const previewDiff = previewDirection < 0 ? prevPreviewMaxValue - nextPreviewMaxValue : -(nextPreviewMaxValue - prevPreviewMaxValue);
 
           const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
@@ -833,17 +821,7 @@ class LineChart {
   }
 
   handleMove(e) {
-    const {
-      data,
-      nodes,
-      startPanelGrabbing,
-      panelX,
-      panelW,
-      lineLength,
-      startPanelResize,
-      devicePixelRatio,
-      maxValue: prevMaxValue,
-    } = this;
+    const { data, nodes, startPanelGrabbing, panelX, panelW, lineLength, startPanelResize, devicePixelRatio, maxValue: prevMaxValue } = this;
 
     const { previewCanvas } = nodes;
     const {
@@ -991,11 +969,7 @@ class LineChart {
 
     const { x } = getPosition(e, devicePixelRatio);
     const { from } = this.getGrab({ x: panelX, panelWidth: panelW, withoutMaxValue: true });
-    const index = rateLimit(
-      Math.floor((x - left * devicePixelRatio) / lineLength + from),
-      0,
-      getDataMaxLength(data) - 1,
-    );
+    const index = rateLimit(Math.floor((x - left * devicePixelRatio) / lineLength + from), 0, getDataMaxLength(data) - 1);
     const backCtx = backNode.getContext("2d");
     const ctx = canvas.getContext("2d");
 
@@ -1131,16 +1105,10 @@ class LineChart {
     const limitedRectY = rateLimit(rectY - blankHeight - (r + circleLw / 2) - blankPaddingY, 0);
     const inDot = limitedRectY + blankHeight > dotYmin;
     const flipX =
-      width - x < x
-        ? x - rectWidth + centerX - (r + circleLw / 2) - blankPaddingX
-        : x + centerX + (r + circleLw / 2) + blankPaddingX;
+      width - x < x ? x - rectWidth + centerX - (r + circleLw / 2) - blankPaddingX : x + centerX + (r + circleLw / 2) + blankPaddingX;
 
     const flippedX = inDot ? flipX : x;
-    const limitedX = rateLimit(
-      flippedX,
-      left * devicePixelRatio + centerX - axialShift,
-      width - rectWidth + centerX + left * devicePixelRatio,
-    );
+    const limitedX = rateLimit(flippedX, left * devicePixelRatio + centerX - axialShift, width - rectWidth + centerX + left * devicePixelRatio);
 
     for (let i = 0; i < selectedItem.length; i++) {
       const { type, value, color } = selectedItem[i];
@@ -1237,12 +1205,7 @@ class LineChart {
     const panelReact = this.getPanelRect(e);
     const [xMin, yMin, xMax, yMax] = panelReact;
 
-    const leftBorderRect = [
-      xMin - controlBorderWidth * devicePixelRatio,
-      yMin,
-      xMin + controlBorderWidth * devicePixelRatio,
-      yMax,
-    ];
+    const leftBorderRect = [xMin - controlBorderWidth * devicePixelRatio, yMin, xMin + controlBorderWidth * devicePixelRatio, yMax];
     const rightBorderRect = [xMax, yMin, xMax + controlBorderWidth * devicePixelRatio, yMax];
 
     return {
@@ -1280,12 +1243,7 @@ class LineChart {
     ctx.beginPath();
     ctx.lineWidth = controlBorderWidth;
     ctx.strokeStyle = previewStroke;
-    ctx.rect(
-      x + left * devicePixelRatio + controlBorderWidth / 2,
-      0,
-      panelWidth - controlBorderWidth,
-      height,
-    );
+    ctx.rect(x + left * devicePixelRatio + controlBorderWidth / 2, 0, panelWidth - controlBorderWidth, height);
     ctx.stroke();
   }
 }
