@@ -579,12 +579,12 @@ class LineChart {
 
   clearCanvas(canvas, withoutXAxis) {
     if (!canvas) return;
-    const { offset } = this;
+    const { offset, devicePixelRatio } = this;
 
     const ctx = canvas.getContext("2d");
     if (withoutXAxis) {
       const { height } = this.getWithHeigthByRatio(canvas);
-      ctx.clearRect(0, 0, canvas.width, height - offset.bottom);
+      ctx.clearRect(0, 0, canvas.width, height - offset.bottom * devicePixelRatio);
     } else {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
@@ -651,7 +651,7 @@ class LineChart {
   }
 
   animateYAxis({ nextLabelDivider, prevLabelDivider, canvas }) {
-    const { duration, offset, labelWidthLimit } = this;
+    const { duration, offset, labelWidthLimit, devicePixelRatio } = this;
     const { bottom } = offset;
     const { height } = this.getWithHeigthByRatio(canvas);
     this.labelDivider = nextLabelDivider;
@@ -663,7 +663,7 @@ class LineChart {
       timing: linear,
       draw: (progress, { props }) => {
         const { lineLength, from, to, axialShift } = props;
-        ctx.clearRect(0, height - bottom, canvas.width, bottom);
+        ctx.clearRect(0, height - bottom * devicePixelRatio, canvas.width, bottom * devicePixelRatio);
         const outProgress = 1 - progress;
 
         const labelPx = labelWidthLimit / 2;
@@ -801,6 +801,7 @@ class LineChart {
         canvas: { node: canvas },
       },
       labelDivider: prevLabelDivider,
+      devicePixelRatio,
     } = this;
 
     const dataForAnimation = deletion ? data : nextData;
@@ -826,7 +827,7 @@ class LineChart {
     if (labelIsChanged) {
       this.animateYAxis({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
     } else {
-      ctx.clearRect(0, height - bottom, canvas.width, bottom);
+      ctx.clearRect(0, height - bottom * devicePixelRatio, canvas.width, bottom * devicePixelRatio);
       this.drawXAxis({
         from,
         to,
