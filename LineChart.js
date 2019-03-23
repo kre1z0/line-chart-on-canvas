@@ -1323,17 +1323,18 @@ class LineChart {
       nodes: {
         canvas: { node: canvas, backNode, ctx },
       },
-      animationY,
     } = this;
 
-    if (startPanelGrabbing !== null || startPanelResize !== null || animationY) {
+    if (startPanelGrabbing !== null || startPanelResize !== null) {
       return;
     }
 
-    this.clearCanvas(canvas);
-    ctx.drawImage(backNode, 0, 0);
-    this.clearCanvas(backNode);
-    this.selectedItem = null;
+    if (!isCanvasBlank(backNode)) {
+      this.clearCanvas(canvas);
+      ctx.drawImage(backNode, 0, 0);
+      this.clearCanvas(backNode);
+      this.selectedItem = null;
+    }
   }
 
   insidePanel(e) {
