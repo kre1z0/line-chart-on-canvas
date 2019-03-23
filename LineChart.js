@@ -58,7 +58,7 @@ class LineChart {
         backNode: document.createElement("canvas"),
         node: document.createElement("canvas"),
         height: 54,
-        lineWidth: 1 * devicePixelRatio,
+        lineWidth: 1.5 * devicePixelRatio,
       },
     };
 
@@ -78,7 +78,7 @@ class LineChart {
     this.animationY = false;
     this.selectedItem = null;
     this.init();
-    this.drawTooltip = throttle(this.drawTooltip, 144);
+    this.drawTooltip = throttle(this.drawTooltip, this.duration + 4);
     this.animateYAxisThrottled = throttle(this.animateYAxis, this.duration + 4);
     this.animateXAxisThrottled = throttle(this.animateXAxis, this.duration + 4);
   }
@@ -1323,9 +1323,10 @@ class LineChart {
       nodes: {
         canvas: { node: canvas, backNode, ctx },
       },
+      animationY,
     } = this;
 
-    if (startPanelGrabbing !== null || startPanelResize !== null) {
+    if (startPanelGrabbing !== null || startPanelResize !== null || animationY) {
       return;
     }
 
@@ -1371,14 +1372,14 @@ class LineChart {
 
     ctx.beginPath();
     // after
-    ctx.rect(x + panelWidth + left * devicePixelRatio, 0, width - x - panelWidth, height);
+    ctx.rect(x + panelWidth + left * devicePixelRatio + 1 * devicePixelRatio, 0, width - x - panelWidth, height);
     ctx.fill();
 
     // center
     ctx.beginPath();
     ctx.lineWidth = controlBorderWidth;
     ctx.strokeStyle = previewStroke;
-    ctx.rect(x + left * devicePixelRatio + controlBorderWidth / 2, 0, panelWidth - controlBorderWidth, height);
+    ctx.rect(x + left * devicePixelRatio + controlBorderWidth / 2, 0, panelWidth - controlBorderWidth + 1 * devicePixelRatio, height);
     ctx.stroke();
   }
 }
