@@ -64,7 +64,7 @@ class LineChart {
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
     this.ticks = 6;
-    this.duration = 144;
+    this.duration = 244;
     this.lineLength = rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
     this.labelDivider = getLabelDivider(this.labelWidthLimit, this.lineLength);
     this.disabledLines = [];
