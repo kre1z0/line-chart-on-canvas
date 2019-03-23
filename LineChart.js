@@ -75,9 +75,9 @@ class LineChart {
     this.labelDivider = getLabelDivider(this.labelWidthLimit, this.lineLength);
     this.disabledLines = [];
     this.devicePixelRatio = devicePixelRatio;
+    this.animationY = false;
     this.selectedItem = null;
     this.init();
-
     this.drawTooltip = throttle(this.drawTooltip, 144);
     this.animateYAxisThrottled = throttle(this.animateYAxis, this.duration + 4);
     this.animateXAxisThrottled = throttle(this.animateXAxis, this.duration + 4);
@@ -642,7 +642,7 @@ class LineChart {
     };
   }
 
-  animateYAxis({ nextLabelDivider, prevLabelDivider, canvas }) {
+  animateXAxis({ nextLabelDivider, prevLabelDivider, canvas }) {
     const { duration, offset, labelWidthLimit, devicePixelRatio } = this;
     const { bottom } = offset;
     const { height } = this.getWithHeigthByRatio(canvas);
@@ -689,7 +689,7 @@ class LineChart {
     });
   }
 
-  animateXAxis({
+  animateYAxis({
     canvas,
     dataForAnimation,
     nextName,
@@ -765,6 +765,12 @@ class LineChart {
           axialShift,
           lineLength,
         });
+
+        if (progress >= 1) {
+          this.animationY = false;
+        } else {
+          this.animationY = true;
+        }
       },
     });
   }
@@ -819,9 +825,9 @@ class LineChart {
     if (labelIsChanged) {
       const props = { prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue };
       if (withoutThrottled) {
-        this.animateYAxis(props);
+        this.animateXAxis(props);
       } else {
-        this.animateYAxisThrottled(props);
+        this.animateXAxisThrottled(props);
       }
     } else {
       ctx.clearRect(0, height - bottom * devicePixelRatio, canvas.width, bottom * devicePixelRatio);
@@ -849,9 +855,11 @@ class LineChart {
       };
 
       if (withoutThrottled) {
-        this.animateXAxis(props);
+        this.animationY = true;
+        this.animateYAxis(props);
       } else {
-        this.animateXAxisThrottled(props);
+        this.animationY = true;
+        this.animateYAxisThrottled(props);
       }
     } else {
       this.clearCanvas(canvas, true);
@@ -1092,9 +1100,10 @@ class LineChart {
       startPanelGrabbing,
       startPanelResize,
       selectedItem,
+      animationY,
     } = this;
 
-    if (startPanelGrabbing !== null || startPanelResize !== null) {
+    if (startPanelGrabbing !== null || startPanelResize !== null || animationY) {
       return;
     }
 
