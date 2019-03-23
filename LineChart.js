@@ -718,6 +718,12 @@ class LineChart {
       duration,
       timing: easeInQuad,
       draw: (progress, { props }) => {
+        if (progress >= 1) {
+          this.animationY = false;
+        } else {
+          this.animationY = true;
+        }
+
         const { panelX, panelW, lineLength, from, to, axialShift } = props;
 
         const direction = prevMaxValue < nextMaxValue ? 1 : -1;
@@ -765,12 +771,6 @@ class LineChart {
           axialShift,
           lineLength,
         });
-
-        if (progress >= 1) {
-          this.animationY = false;
-        } else {
-          this.animationY = true;
-        }
       },
     });
   }
@@ -1329,7 +1329,7 @@ class LineChart {
       return;
     }
 
-    this.clearCanvas(canvas);
+    this.clearCanvas(canvas, true);
     ctx.drawImage(backNode, 0, 0);
     this.clearCanvas(backNode);
     this.selectedItem = null;
