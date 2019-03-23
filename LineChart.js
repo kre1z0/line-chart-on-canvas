@@ -136,7 +136,7 @@ class LineChart {
   overdraw() {
     const { nodes, lineLength, data, labelDivider } = this;
     const {
-      previewCanvas: { node: previewCanvas, backNode },
+      previewCanvas: { node: previewCanvas, backCtx },
     } = nodes;
 
     const { width: previewCanvasW } = this.getWithHeigthByRatio(previewCanvas);
@@ -149,7 +149,6 @@ class LineChart {
     this.maxValue = getMaxValueFromTo({ data, from, to });
     const axialShift = getAxialShift(lineLength, from);
 
-    const backCtx = backNode.getContext("2d");
     backCtx.drawImage(previewCanvas, 0, 0);
 
     this.drawYAxis();
@@ -190,8 +189,8 @@ class LineChart {
     const { nodes, offset } = this;
     const { bottom, top } = offset;
     const {
-      canvas: { node: canvas, lineWidth: canvasLineWidth },
-      previewCanvas: { node: previewCanvas, backNode: previewBackNode, lineWidth: previewLineWidth },
+      canvas: { node: canvas, ctx, lineWidth: canvasLineWidth },
+      previewCanvas: { node: previewCanvas, ctx: previewCtx, backCtx, lineWidth: previewLineWidth },
     } = nodes;
 
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
@@ -204,6 +203,7 @@ class LineChart {
       if (type === "line") {
         // main canvas
         this.draw({
+          ctx,
           alpha: name === nextName ? alpha : 1,
           axialShift,
           data: item,
@@ -222,6 +222,7 @@ class LineChart {
         // preview canvas
         if (withPreview) {
           this.draw({
+            ctx: previewCtx,
             alpha: name === nextName ? alpha : 1,
             top: 4,
             height: previewCanvasH,
@@ -236,7 +237,6 @@ class LineChart {
     }
 
     if (withPreview) {
-      const backCtx = previewBackNode.getContext("2d");
       backCtx.drawImage(previewCanvas, 0, 0);
       this.fillPreviewCanvas(panelX, panelW);
     }
@@ -246,7 +246,7 @@ class LineChart {
     const { nodes, offset, devicePixelRatio, theme, font, ticks } = this;
     const { gridLineColor, labelColor } = theme;
     const {
-      canvas: { node: canvas },
+      canvas: { node: canvas, ctx },
     } = nodes;
     const maxValue = max || this.maxValue;
 
@@ -254,7 +254,6 @@ class LineChart {
     const yScale = Array.from({ length: ticks }, (_, index) => Math.ceil(maxValue / ticks) * index);
     const { width, height } = this.getWithHeigthByRatio(canvas);
     const h = height - (offset.bottom + offset.top) * devicePixelRatio;
-    const ctx = canvas.getContext("2d");
 
     ctx.textAlign = "left";
     const textPx = 14 * devicePixelRatio;
@@ -321,25 +320,10 @@ class LineChart {
     };
   }
 
-  draw({
-    data,
-    maxValue,
-    previewMaxValue,
-    canvas,
-    height,
-    lineLength,
-    lineWidth,
-    from = 0,
-    to,
-    axialShift = 0,
-    bottom = 0,
-    top = 0,
-    alpha,
-  } = {}) {
+  draw({ data, maxValue, previewMaxValue, ctx, height, lineLength, lineWidth, from = 0, to, axialShift = 0, bottom = 0, top = 0, alpha } = {}) {
     const { offset, devicePixelRatio } = this;
     const { values, color } = data;
     const { left } = offset;
-    const ctx = canvas.getContext("2d");
     ctx.save();
 
     let prevX = 0;
@@ -497,9 +481,11 @@ class LineChart {
     let container = null;
 
     for (let key in nodes) {
-      const { node } = nodes[key];
+      const { node, backNode } = nodes[key];
       node.classList.add(`${this.classNamePrefix}-${key}`);
       if (key !== "container" && container) {
+        nodes[key].ctx = node.getContext("2d");
+        nodes[key].backCtx = backNode.getContext("2d");
         container.appendChild(node);
       } else {
         container = node;
@@ -800,7 +786,7 @@ class LineChart {
       data,
       offset: { bottom },
       nodes: {
-        canvas: { node: canvas },
+        canvas: { node: canvas, ctx },
       },
       labelDivider: prevLabelDivider,
       devicePixelRatio,
@@ -823,7 +809,6 @@ class LineChart {
     const chartsDataIsChanged = nextName;
     const labelIsChanged = nextLabelDivider && prevLabelDivider !== nextLabelDivider;
 
-    const ctx = canvas.getContext("2d");
     const { height } = this.getWithHeigthByRatio(canvas);
 
     if (labelIsChanged) {
@@ -891,12 +876,11 @@ class LineChart {
       devicePixelRatio,
       theme: { labelColor },
       nodes: {
-        canvas: { node: canvas },
+        canvas: { node: canvas, ctx },
       },
     } = this;
 
     const labels = data[0].labels;
-    const ctx = canvas.getContext("2d");
     const { height } = this.getWithHeigthByRatio(canvas);
     let startIndex = 0;
     const fromInt = Math.floor(from);
@@ -956,7 +940,9 @@ class LineChart {
       labelDivider: prevLabelDivider,
     } = this;
 
-    const { previewCanvas } = nodes;
+    const {
+      previewCanvas: { ctx: previewCtx, node: previewCanvasNode, backNode: previewBackNode },
+    } = nodes;
     const {
       canvas: { node: canvas },
     } = nodes;
@@ -964,21 +950,20 @@ class LineChart {
     const isNotAction = startPanelGrabbing === null && startPanelResize === null;
     const { x } = getPosition(e, devicePixelRatio);
     const { width: canvasWidth } = this.getWithHeigthByRatio(canvas);
-    const { width } = this.getWithHeigthByRatio(previewCanvas.node);
+    const { width } = this.getWithHeigthByRatio(previewCanvasNode);
 
     if (isNotAction && move) {
-      previewCanvas.node.style.cursor = "move";
-      previewCanvas.node.style.cursor = "-webkit-grab";
-      previewCanvas.node.style.cursor = "grab";
+      previewCanvasNode.style.cursor = "move";
+      previewCanvasNode.style.cursor = "-webkit-grab";
+      previewCanvasNode.style.cursor = "grab";
     } else if (isNotAction && (leftBorder || rightBorder)) {
-      previewCanvas.node.style.cursor = "col-resize";
+      previewCanvasNode.style.cursor = "col-resize";
     } else if (isNumeric(startPanelResize)) {
       // panel resize
       const { pX, pW } = this.resizePanel(x, width);
 
-      this.clearCanvas(previewCanvas.node);
-      const ctxPreview = previewCanvas.node.getContext("2d");
-      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+      this.clearCanvas(previewCanvasNode);
+      previewCtx.drawImage(previewBackNode, 0, 0);
       this.fillPreviewCanvas(pX, pW);
 
       const { from, to, maxValue: nextMaxValue } = this.getGrab({ x: pX, panelWidth: pW });
@@ -1003,9 +988,9 @@ class LineChart {
       const positionX = x - startPanelGrabbing;
       const nextX = rateLimit(panelX + positionX, 0, width - panelW);
 
-      this.clearCanvas(previewCanvas.node);
-      const ctxPreview = previewCanvas.node.getContext("2d");
-      ctxPreview.drawImage(previewCanvas.backNode, 0, 0);
+      this.clearCanvas(previewCanvasNode);
+
+      previewCtx.drawImage(previewBackNode, 0, 0);
       this.fillPreviewCanvas(nextX, panelW);
 
       const { maxValue: nextMaxValue, from, to } = this.getGrab({
@@ -1025,7 +1010,7 @@ class LineChart {
         lineLength,
       });
     } else if (isNotAction) {
-      previewCanvas.node.style.cursor = "default";
+      previewCanvasNode.style.cursor = "default";
     }
   }
 
@@ -1097,7 +1082,7 @@ class LineChart {
       panelW,
       offset: { left },
       nodes: {
-        canvas: { node: canvas, backNode },
+        canvas: { node: canvas, backNode, ctx, backCtx },
       },
       startPanelGrabbing,
       startPanelResize,
@@ -1111,8 +1096,6 @@ class LineChart {
     const { x } = getPosition(e, devicePixelRatio);
     const { from } = this.getGrab({ x: panelX, panelWidth: panelW, withoutMaxValue: true });
     const index = rateLimit(Math.floor((x - left * devicePixelRatio) / lineLength + from), 0, getDataMaxLength(data) - 1);
-    const backCtx = backNode.getContext("2d");
-    const ctx = canvas.getContext("2d");
 
     if (selectedItem === null) {
       backCtx.drawImage(canvas, 0, 0);
@@ -1170,7 +1153,7 @@ class LineChart {
   drawTooltip({ index, from }) {
     const {
       nodes: {
-        canvas: { node: canvas, lineWidth },
+        canvas: { node: canvas, lineWidth, ctx },
       },
       font,
       theme: { gridLineColor, textColor, tooltipFill, fillColor, tooltipShadowColor },
@@ -1186,7 +1169,6 @@ class LineChart {
     }
 
     const { width, height } = this.getWithHeigthByRatio(canvas);
-    const ctx = canvas.getContext("2d");
     ctx.textAlign = "left";
 
     const r = 5 * devicePixelRatio;
@@ -1325,7 +1307,7 @@ class LineChart {
       startPanelGrabbing,
       startPanelResize,
       nodes: {
-        canvas: { node: canvas, backNode },
+        canvas: { node: canvas, backNode, ctx },
       },
     } = this;
 
@@ -1334,7 +1316,6 @@ class LineChart {
     }
 
     this.clearCanvas(canvas);
-    const ctx = canvas.getContext("2d");
     ctx.drawImage(backNode, 0, 0);
     this.clearCanvas(backNode);
     this.selectedItem = null;
@@ -1361,13 +1342,11 @@ class LineChart {
     const { nodes, controlBorderWidth, offset, devicePixelRatio, theme } = this;
     const { previewFill, previewStroke } = theme;
     const {
-      previewCanvas: { node: previewCanvas },
+      previewCanvas: { node: previewCanvas, ctx },
     } = nodes;
     const { left } = offset;
 
     const { width, height } = this.getWithHeigthByRatio(previewCanvas);
-
-    const ctx = previewCanvas.getContext("2d");
 
     ctx.beginPath();
     ctx.fillStyle = previewFill;

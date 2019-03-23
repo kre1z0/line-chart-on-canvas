@@ -29,11 +29,11 @@
         xhr.send();
       };
 
-      getJSON("./data.json", (err, data) => {
+      getJSON("./data.json", (err, res) => {
         let dark = true;
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
-
+        const data = res.slice(0, 1);
         const charts = [];
 
         for (let i = 0; i < data.length; i++) {
