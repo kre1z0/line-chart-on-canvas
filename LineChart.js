@@ -74,8 +74,8 @@ class LineChart {
     this.init();
 
     this.drawTooltip = throttle(this.drawTooltip, 144);
-    this.animateYAxis = throttle(this.animateYAxis, this.duration + 4);
-    this.animateXAxis = throttle(this.animateXAxis, this.duration + 4);
+    this.animateYAxisThrottled = throttle(this.animateYAxis, this.duration + 4);
+    this.animateXAxisThrottled = throttle(this.animateXAxis, this.duration + 4);
   }
 
   init() {
@@ -468,6 +468,7 @@ class LineChart {
       panelW,
       lineLength,
       withPreview: true,
+      withoutThrottled: true,
     });
 
     this.data = nextData;
@@ -793,6 +794,7 @@ class LineChart {
     deletion,
     nextName,
     nextLabelDivider,
+    withoutThrottled,
   } = {}) {
     const {
       data,
@@ -825,7 +827,11 @@ class LineChart {
     const { height } = this.getWithHeigthByRatio(canvas);
 
     if (labelIsChanged) {
-      this.animateYAxis({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
+      if (withoutThrottled) {
+        this.animateYAxis({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
+      } else {
+        this.animateYAxisThrottled({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
+      }
     } else {
       ctx.clearRect(0, height - bottom * devicePixelRatio, canvas.width, bottom * devicePixelRatio);
       this.drawXAxis({
@@ -838,18 +844,33 @@ class LineChart {
     }
 
     if (maxValueIsChanged || chartsDataIsChanged) {
-      this.animateXAxis({
-        dataForAnimation,
-        canvas,
-        deletion,
-        nextName,
-        prevMaxValue,
-        nextMaxValue,
-        prevPreviewMaxValue,
-        nextPreviewMaxValue,
-        withPreview,
-        nextData,
-      });
+      if (withoutThrottled) {
+        this.animateXAxis({
+          dataForAnimation,
+          canvas,
+          deletion,
+          nextName,
+          prevMaxValue,
+          nextMaxValue,
+          prevPreviewMaxValue,
+          nextPreviewMaxValue,
+          withPreview,
+          nextData,
+        });
+      } else {
+        this.animateXAxisThrottled({
+          dataForAnimation,
+          canvas,
+          deletion,
+          nextName,
+          prevMaxValue,
+          nextMaxValue,
+          prevPreviewMaxValue,
+          nextPreviewMaxValue,
+          withPreview,
+          nextData,
+        });
+      }
     } else {
       this.clearCanvas(canvas, true);
 
