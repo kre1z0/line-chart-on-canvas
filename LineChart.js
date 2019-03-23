@@ -252,8 +252,8 @@ class LineChart {
     const { width, height } = this.getWithHeigthByRatio(canvas);
     const h = height - (offset.bottom + offset.top) * devicePixelRatio;
     const ctx = canvas.getContext("2d");
-    ctx.save();
-    ctx.beginPath();
+
+    ctx.textAlign = "left";
     const textPx = 14 * devicePixelRatio;
     ctx.font = `${textPx}px ${font}`;
 
@@ -268,9 +268,6 @@ class LineChart {
       ctx.moveTo(left, rY);
       ctx.lineTo(width + left, rY);
     }
-
-    ctx.stroke();
-    ctx.restore();
   }
 
   getGrab({ x, panelWidth, withoutMaxValue = false, nextData } = {}) {
@@ -570,10 +567,17 @@ class LineChart {
     }
   }
 
-  clearCanvas(canvas) {
+  clearCanvas(canvas, withoutXAxis) {
     if (!canvas) return;
+    const { offset } = this;
+
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (withoutXAxis) {
+      const { height } = this.getWithHeigthByRatio(canvas);
+      ctx.clearRect(0, 0, canvas.width, height - offset.bottom);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
   }
 
   getPanelWidth() {
@@ -655,7 +659,7 @@ class LineChart {
   } = {}) {
     const {
       data,
-      offset,
+      offset: { bottom, top },
       devicePixelRatio,
       ticks,
       duration,
@@ -683,26 +687,71 @@ class LineChart {
     const chartsDataIsChanged = nextName;
     const labelIsChanged = nextLabelDivider && prevLabelDivider !== nextLabelDivider;
 
-    if (maxValueIsChanged || chartsDataIsChanged || labelIsChanged) {
-      const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
-      this.maxValue = nextMaxValue;
+    const ctx = canvas.getContext("2d");
+    const { height } = this.getWithHeigthByRatio(canvas);
+
+    if (labelIsChanged) {
       this.labelDivider = nextLabelDivider;
 
-      const gridH = (canvasHeight - offset.bottom * devicePixelRatio) / ticks / 2;
+      this.animate({
+        duration,
+        timing: linear,
+        draw: (progress, { props }) => {
+          const { lineLength, from, to, axialShift } = props;
+          ctx.clearRect(0, height - bottom, canvas.width, bottom);
+          const outProgress = 1 - progress;
+
+          const labelPx = labelWidthLimit / 2;
+          const labelX = nextLabelDivider > prevLabelDivider ? -(labelPx * progress) : -labelPx + labelPx * progress;
+          const alphaLabel = nextLabelDivider > prevLabelDivider ? outProgress : progress;
+
+          if (nextLabelDivider > prevLabelDivider) {
+            this.drawXAxis({
+              from,
+              to,
+              axialShift,
+              next: nextLabelDivider,
+              divider: prevLabelDivider,
+              lineLength,
+              labelX,
+              alpha: alphaLabel,
+            });
+          } else {
+            this.drawXAxis({
+              from,
+              to,
+              axialShift,
+              next: prevLabelDivider,
+              divider: nextLabelDivider,
+              lineLength,
+              labelX,
+              alpha: alphaLabel,
+            });
+          }
+        },
+      });
+    } else {
+      ctx.clearRect(0, height - bottom, canvas.width, bottom);
+      this.drawXAxis({
+        from,
+        to,
+        axialShift,
+        divider: prevLabelDivider,
+        lineLength,
+      });
+    }
+
+    if (maxValueIsChanged || chartsDataIsChanged) {
+      const { height: canvasHeight } = this.getWithHeigthByRatio(canvas);
+      this.maxValue = nextMaxValue;
+
+      const gridH = (canvasHeight - bottom * devicePixelRatio) / ticks / 2;
 
       this.animate({
         duration,
         timing: easeInQuad,
         draw: (progress, { props }) => {
-          const {
-            panelX,
-            panelW,
-            lineLength,
-            from,
-            to,
-            axialShift,
-            // prev, next
-          } = props;
+          const { panelX, panelW, lineLength, from, to, axialShift } = props;
 
           const direction = prevMaxValue < nextMaxValue ? 1 : -1;
           const previewDirection = prevPreviewMaxValue < nextPreviewMaxValue ? 1 : -1;
@@ -712,7 +761,7 @@ class LineChart {
           if (withPreview) {
             this.clearAllCanvases();
           } else {
-            this.clearCanvas(canvas);
+            this.clearCanvas(canvas, true);
           }
 
           const outProgress = 1 - progress;
@@ -735,38 +784,6 @@ class LineChart {
           const previewDiff = previewDirection < 0 ? prevPreviewMaxValue - nextPreviewMaxValue : -(nextPreviewMaxValue - prevPreviewMaxValue);
           const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
-          if (labelIsChanged) {
-            const labelPx = labelWidthLimit / 2;
-            const labelX = nextLabelDivider > prevLabelDivider ? -(labelPx * progress) : -labelPx + labelPx * progress;
-            const alphaLabel = nextLabelDivider > prevLabelDivider ? outProgress : progress;
-
-            if (nextLabelDivider > prevLabelDivider) {
-              this.drawXAxis({
-                from,
-                to,
-                axialShift,
-                next: nextLabelDivider,
-                divider: prevLabelDivider,
-                lineLength,
-                labelX,
-                alpha: alphaLabel,
-              });
-            } else {
-              this.drawXAxis({
-                from,
-                to,
-                axialShift,
-                next: prevLabelDivider,
-                divider: nextLabelDivider,
-                lineLength,
-                labelX,
-                alpha: alphaLabel,
-              });
-            }
-          } else {
-            this.drawXAxis({ from, to, axialShift, divider: nextLabelDivider, lineLength });
-          }
-
           this.redraw({
             nextName,
             alpha: deletion ? outProgress : progress,
@@ -784,19 +801,11 @@ class LineChart {
         },
       });
     } else {
-      this.clearCanvas(canvas);
+      this.clearCanvas(canvas, true);
 
       if (dataForAnimation.length > 1) {
         this.drawYAxis();
       }
-
-      this.drawXAxis({
-        from,
-        to,
-        axialShift,
-        divider: prevLabelDivider,
-        lineLength,
-      });
 
       this.redraw({
         data: dataForAnimation,
