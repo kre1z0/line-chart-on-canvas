@@ -1,11 +1,15 @@
 .tgLineChart-header h2 {
 	padding-left: 20px;
-	margin-bottom: 0;
+	margin: 0;
 }
 
 .tgLineChart-container {
 	width: 100%;
-	padding-top: 44px;
+	padding-bottom: 24px;
+}
+
+.tgLineChart-container:first-of-type {
+	padding-top: 24px;
 }
 
 .tgLineChart-container.tgLineChart-dark {

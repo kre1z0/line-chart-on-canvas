@@ -47,16 +47,13 @@
           );
         }
 
-        document.body.classList.add("dark");
         modeBtn.addEventListener("click", () => {
           dark = !dark;
 
           if (document.body.classList.contains("dark")) {
             modeBtn.innerText = "Switch to Night Mode";
-            document.body.classList.remove("dark");
           } else {
             modeBtn.innerText = "Switch to Day Mode";
-            document.body.classList.add("dark");
           }
 
           for (let i = 0; i < charts.length; i++) {

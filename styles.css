@@ -1,13 +1,7 @@
 body {
 	margin: 0;
-	padding: 24px 0;
 	font: 13px/18px Tahoma,sans-serif,Arial,Helvetica;
 	-webkit-tap-highlight-color: rgba(0,0,0,0);
-}
-
-body.dark {
-	color: #fff;
-	background-color: #242F3E;
 }
 
 .header {
