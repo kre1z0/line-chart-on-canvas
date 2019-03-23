@@ -1,4 +1,5 @@
 "use asm";
+"use strict";
 
 class LineChart {
   constructor({ root, data, offset, header, dark = false }) {
