@@ -2,7 +2,7 @@
 "use strict";
 
 class LineChart {
-  constructor({ root, data, header, dark = false }) {
+  constructor({ root, data, header, dark = false, left = 20, right = 20, bottom = 44, top = 24 }) {
     const devicePixelRatio = window.devicePixelRatio || 1;
     this.classNamePrefix = "tgLineChart";
     this.font = "Tahoma,sans-serif,Arial,Helvetica";
@@ -37,7 +37,12 @@ class LineChart {
     this.data = data;
     this.root = root;
     this.header = header;
-    this.offset = { left: 20, right: 20, bottom: 44, top: 24 };
+    this.offset = {
+      left,
+      right,
+      top,
+      bottom,
+    };
     this.labelWidthLimit = 74 * devicePixelRatio;
     this.nodes = {
       container: {
@@ -122,6 +127,7 @@ class LineChart {
     const axialShift = getAxialShift(this.lineLength, from);
 
     this.drawYAxis();
+    this.drawXAxis({ from, to, axialShift, lineLength: this.lineLength, divider: this.labelDivider });
     this.redraw({
       data: this.data,
       panelX: this.panelX,
@@ -514,7 +520,6 @@ class LineChart {
 
   resizeNodes() {
     const { nodes, devicePixelRatio } = this;
-    const scrollbarWidth = getScrollbarWidth();
     let container = null;
 
     for (let key in nodes) {
@@ -522,15 +527,15 @@ class LineChart {
       if (key !== "container" && container) {
         const { width } = container.getBoundingClientRect();
 
-        node.style.width = width - scrollbarWidth + "px";
+        node.style.width = width + "px";
         node.style.height = height + "px";
-        node.setAttribute("width", (width - scrollbarWidth) * devicePixelRatio);
+        node.setAttribute("width", width * devicePixelRatio);
         node.setAttribute("height", height * devicePixelRatio);
 
         if (backNode) {
-          backNode.style.width = width - scrollbarWidth + "px";
+          backNode.style.width = width + "px";
           backNode.style.height = height + "px";
-          backNode.setAttribute("width", (width - scrollbarWidth) * devicePixelRatio);
+          backNode.setAttribute("width", width * devicePixelRatio);
           backNode.setAttribute("height", height * devicePixelRatio);
         }
       } else {
@@ -597,23 +602,23 @@ class LineChart {
     const {
       previewCanvas: { node: previewCanvas },
     } = nodes;
-    const { left: offsetLeft, right: offsetRight } = offset;
+    const { left } = offset;
 
     const { top } = previewCanvas.getBoundingClientRect();
     const { height } = this.getWithHeigthByRatio(previewCanvas);
 
     if (e.type === "touchstart" || e.type === "touchmove" || e.type === "touchend") {
       return [
-        panelX + (offsetLeft + controlBorderWidth) * devicePixelRatio,
+        panelX + (left + controlBorderWidth) * devicePixelRatio,
         top * devicePixelRatio,
-        panelX + panelW + (offsetRight - controlBorderWidth) * devicePixelRatio,
+        panelX + panelW + (left - controlBorderWidth) * devicePixelRatio,
         top * devicePixelRatio + height,
       ];
     } else {
       return [
-        panelX + (offsetLeft + controlBorderWidth) * devicePixelRatio,
+        panelX + (left + controlBorderWidth) * devicePixelRatio,
         0,
-        panelX + panelW + (offsetRight - controlBorderWidth) * devicePixelRatio,
+        panelX + panelW + (left - controlBorderWidth) * devicePixelRatio,
         height,
       ];
     }

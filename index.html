@@ -29,16 +29,16 @@
         xhr.send();
       };
 
-      getJSON("./data.json", (err, res) => {
+      getJSON("./data.json", (err, data) => {
         let dark = true;
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
-        const data = res.slice(0, 1);
         const charts = [];
 
         for (let i = 0; i < data.length; i++) {
           charts.push(
             new LineChart({
+              right: 20 + getScrollbarWidth(),
               dark,
               root,
               data: normalizeData(data[i]),
@@ -47,13 +47,16 @@
           );
         }
 
+        document.body.classList.add("dark");
         modeBtn.addEventListener("click", () => {
           dark = !dark;
 
           if (document.body.classList.contains("dark")) {
             modeBtn.innerText = "Switch to Night Mode";
+            document.body.classList.remove("dark");
           } else {
             modeBtn.innerText = "Switch to Day Mode";
+            document.body.classList.add("dark");
           }
 
           for (let i = 0; i < charts.length; i++) {
