@@ -834,7 +834,6 @@ class LineChart {
       offset: { bottom, top, left },
       devicePixelRatio,
       theme: { labelColor },
-      labelWidthLimit,
       nodes: {
         canvas: { node: canvas },
       },
@@ -854,8 +853,6 @@ class LineChart {
     const remainderFrom = fromInt % divider;
     const remainderFromNext = fromInt % next;
 
-    let skip = null;
-
     for (let i = fromInt; i < labels.length; i++) {
       const label = labels[i];
       const remainderIndex = startIndex % divider;
@@ -873,20 +870,10 @@ class LineChart {
         ctx.textAlign = "center";
       }
 
-      // if (startIndex === 0) {
-      //   skip = lineLength;
-      //   ctx.textAlign = "left";
-      //   ctx.fillText(labels[0], rX - lineLength * fromInt - labelX, lRY);
-      // }
-      // else if (skip !== null && skip < labelWidthLimit) {
-      //   skip += lineLength;
-      // }
-      // else
       if (next >= 1 && remainderFromNext + remainderIndexNext === next - 1) {
         ctx.fillStyle = labelColor;
         ctx.fillText(label, rX, lRY);
       } else if (divider >= 1 && remainderFrom + remainderIndex === divider - 1) {
-        console.info("--> skip ggwp 4444", skip);
         ctx.fillStyle = hexToRGB(labelColor, alpha);
         ctx.fillText(label, rX - labelX, lRY);
       }
