@@ -1329,7 +1329,7 @@ class LineChart {
       return;
     }
 
-    this.clearCanvas(canvas, true);
+    this.clearCanvas(canvas);
     ctx.drawImage(backNode, 0, 0);
     this.clearCanvas(backNode);
     this.selectedItem = null;
