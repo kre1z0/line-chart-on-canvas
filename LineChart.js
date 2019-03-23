@@ -967,6 +967,8 @@ class LineChart {
     const { width } = this.getWithHeigthByRatio(previewCanvas.node);
 
     if (isNotAction && move) {
+      previewCanvas.node.style.cursor = "move";
+      previewCanvas.node.style.cursor = "-webkit-grab";
       previewCanvas.node.style.cursor = "grab";
     } else if (isNotAction && (leftBorder || rightBorder)) {
       previewCanvas.node.style.cursor = "col-resize";
@@ -1056,6 +1058,8 @@ class LineChart {
     const { move, leftBorder, rightBorder } = this.insidePanel(e);
 
     if (move) {
+      previewCanvas.node.style.cursor = "move";
+      previewCanvas.node.style.cursor = "-webkit-grab";
       previewCanvas.node.style.cursor = "grab";
     } else if (leftBorder || rightBorder) {
       previewCanvas.node.style.cursor = "col-resize";
@@ -1077,7 +1081,9 @@ class LineChart {
       previewCanvas.node.style.cursor = "col-resize";
     } else if (move) {
       this.startPanelGrabbing = x * devicePixelRatio;
+      document.documentElement.style.cursor = "-webkit-grabbing";
       document.documentElement.style.cursor = "grabbing";
+      previewCanvas.node.style.cursor = "-webkit-grabbing";
       previewCanvas.node.style.cursor = "grabbing";
     }
   }
