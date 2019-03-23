@@ -261,12 +261,14 @@ class LineChart {
       const y = i !== 0 ? h - i * (h / ticks) - 0.5 - translateY + +offset.top * devicePixelRatio : h - 0.5 + offset.top * devicePixelRatio;
       const rY = (0.5 + y) | 0;
 
+      ctx.beginPath();
       ctx.fillStyle = hexToRGB(labelColor, progress);
       ctx.fillText(numberWithSpaces(yScale[i]), left, rY - 8);
       ctx.strokeStyle = hexToRGB(gridLineColor, progress);
       ctx.lineWidth = 1 * devicePixelRatio;
       ctx.moveTo(left, rY);
       ctx.lineTo(width + left, rY);
+      ctx.stroke();
     }
   }
 
@@ -468,14 +470,19 @@ class LineChart {
     this.data = nextData;
   }
 
-  clearAllCanvases() {
+  clearAllCanvases(withoutXAxis = false) {
     const { nodes } = this;
 
     for (let key in nodes) {
       const { node, backNode } = nodes[key];
       if (key !== "container") {
-        this.clearCanvas(node);
-        this.clearCanvas(backNode);
+        if (withoutXAxis && key === "canvas") {
+          this.clearCanvas(node, withoutXAxis);
+          this.clearCanvas(node, withoutXAxis);
+        } else {
+          this.clearCanvas(node);
+          this.clearCanvas(backNode);
+        }
       }
     }
   }
@@ -659,7 +666,7 @@ class LineChart {
   } = {}) {
     const {
       data,
-      offset: { bottom, top },
+      offset: { bottom },
       devicePixelRatio,
       ticks,
       duration,
@@ -759,7 +766,7 @@ class LineChart {
           const slideIn = direction < 0 ? -gridH + gridH * progress : gridH - gridH * progress;
 
           if (withPreview) {
-            this.clearAllCanvases();
+            this.clearAllCanvases(true);
           } else {
             this.clearCanvas(canvas, true);
           }
@@ -827,27 +834,27 @@ class LineChart {
       offset: { bottom, top, left },
       devicePixelRatio,
       theme: { labelColor },
+      labelWidthLimit,
       nodes: {
         canvas: { node: canvas },
       },
     } = this;
 
     const labels = data[0].labels;
-
+    const ctx = canvas.getContext("2d");
     const { height } = this.getWithHeigthByRatio(canvas);
     let startIndex = 0;
     const fromInt = Math.floor(from);
-    const ctx = canvas.getContext("2d");
-
     const textPx = 14 * devicePixelRatio;
     const h = height - (bottom + top) * devicePixelRatio;
     ctx.font = `${textPx}px ${font}`;
-    ctx.textAlign = "center";
 
     const lY = h + (bottom / 2 + top) * devicePixelRatio;
     const lRY = (0.5 + lY) | 0;
     const remainderFrom = fromInt % divider;
     const remainderFromNext = fromInt % next;
+
+    let skip = null;
 
     for (let i = fromInt; i < labels.length; i++) {
       const label = labels[i];
@@ -855,18 +862,31 @@ class LineChart {
       const remainderIndexNext = startIndex % next;
       const x = lineLength * startIndex + (left * devicePixelRatio - axialShift);
       const rX = (0.5 + x) | 0;
+
       const lastLabel = startIndex === labels.length - fromInt - 1;
 
       if (lastLabel) {
         ctx.textAlign = "right";
       } else if (i === 0) {
         ctx.textAlign = "left";
+      } else {
+        ctx.textAlign = "center";
       }
 
+      // if (startIndex === 0) {
+      //   skip = lineLength;
+      //   ctx.textAlign = "left";
+      //   ctx.fillText(labels[0], rX - lineLength * fromInt - labelX, lRY);
+      // }
+      // else if (skip !== null && skip < labelWidthLimit) {
+      //   skip += lineLength;
+      // }
+      // else
       if (next >= 1 && remainderFromNext + remainderIndexNext === next - 1) {
         ctx.fillStyle = labelColor;
         ctx.fillText(label, rX, lRY);
       } else if (divider >= 1 && remainderFrom + remainderIndex === divider - 1) {
+        console.info("--> skip ggwp 4444", skip);
         ctx.fillStyle = hexToRGB(labelColor, alpha);
         ctx.fillText(label, rX - labelX, lRY);
       }
