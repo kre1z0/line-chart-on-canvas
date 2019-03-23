@@ -2,7 +2,7 @@
 "use strict";
 
 class LineChart {
-  constructor({ root, data, offset, header, dark = false }) {
+  constructor({ root, data, header, dark = false }) {
     const devicePixelRatio = window.devicePixelRatio || 1;
     this.classNamePrefix = "tgLineChart";
     this.font = "Tahoma,sans-serif,Arial,Helvetica";
@@ -37,7 +37,7 @@ class LineChart {
     this.data = data;
     this.root = root;
     this.header = header;
-    this.offset = { left: 20, right: 20, bottom: 44, top: 24, ...offset };
+    this.offset = { left: 20, right: 20, bottom: 44, top: 24 };
     this.labelWidthLimit = 74 * devicePixelRatio;
     this.nodes = {
       container: {

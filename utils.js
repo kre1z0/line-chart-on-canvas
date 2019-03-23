@@ -55,18 +55,14 @@ function normalizeData(data) {
     const name = columns[i][0];
     const values = columns[i].slice(1);
 
-    const obj = {
-      type: types[name],
-      values,
-      name,
-    };
-
     if (name !== "x") {
       const color = colors[name];
       const chart = names[name];
 
       normalizedData.push({
-        ...obj,
+        type: types[name],
+        values,
+        name,
         color,
         chart,
       });
@@ -80,7 +76,7 @@ function normalizeData(data) {
         return `${date} ${month}`;
       });
 
-      normalizedData.push({ ...obj, labels });
+      normalizedData.push({ type: types[name], values, name, labels });
     }
   }
 
