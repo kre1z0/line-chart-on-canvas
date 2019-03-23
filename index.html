@@ -29,17 +29,14 @@
         xhr.send();
       };
 
-      getJSON("./data.json", (err, data) => {
+      getJSON("./data.json", (err, res) => {
         let dark = true;
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
 
         const charts = [];
 
-        delete data[1];
-        delete data[2];
-        delete data[3];
-        delete data[4];
+        const data = res.slice(0, 1);
 
         for (let i = 0; i < data.length; i++) {
           charts.push(

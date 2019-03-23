@@ -183,6 +183,10 @@ function easeInQuad(t) {
   return t * t;
 }
 
+function linear(t) {
+  return t;
+}
+
 function numberWithSpaces(x) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
@@ -214,16 +218,4 @@ function getScrollbarWidth() {
 function getLabelDivider(width, lineLength) {
   const diff = Math.ceil(width / lineLength);
   return geometricProgression(rateLimit(diff, 1));
-}
-
-function debounce(func, interval) {
-  let timer = null;
-  return function() {
-    if (timer) clearTimeout(timer);
-    let args = arguments;
-    timer = window.setTimeout(() => {
-      timer = null;
-      func.apply(this, args);
-    }, interval);
-  };
 }

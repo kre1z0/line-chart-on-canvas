@@ -64,7 +64,6 @@ class LineChart {
     this.maxValue = 0;
     this.lineLengthPreviewCanvas = 0;
     this.ticks = 6;
-    this.props = {};
     this.duration = 144;
     this.lineLength = rateLimit(window.innerWidth / (getDataMaxLength(this.data) - 1)) * devicePixelRatio * 4;
     this.labelDivider = getLabelDivider(this.labelWidthLimit, this.lineLength);
@@ -132,7 +131,7 @@ class LineChart {
   }
 
   overdraw() {
-    const { nodes, lineLength, data } = this;
+    const { nodes, lineLength, data, labelDivider } = this;
     const {
       previewCanvas: { node: previewCanvas, backNode },
     } = nodes;
@@ -151,6 +150,13 @@ class LineChart {
     backCtx.drawImage(previewCanvas, 0, 0);
 
     this.drawYAxis();
+    this.drawXAxis({
+      from,
+      to,
+      axialShift,
+      divider: labelDivider,
+      lineLength,
+    });
     this.redraw({
       data,
       panelX: this.panelX,
@@ -176,6 +182,7 @@ class LineChart {
     lineLength = this.lineLength,
     nextName,
     nextLabelDivider,
+    alphaLabel = 1,
   }) {
     const { nodes, offset } = this;
     const { bottom, top } = offset;
@@ -187,10 +194,6 @@ class LineChart {
     const { height: canvasH } = this.getWithHeigthByRatio(canvas);
     const { height: previewCanvasH } = this.getWithHeigthByRatio(previewCanvas);
 
-    const labels = data[0].labels;
-
-    let labelsIsDrawn = false;
-
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
       const { type, name } = item;
@@ -198,7 +201,6 @@ class LineChart {
       if (type === "line") {
         // main canvas
         this.draw({
-          nextLabelDivider,
           alpha: name === nextName ? alpha : 1,
           axialShift,
           data: item,
@@ -211,11 +213,8 @@ class LineChart {
           bottom,
           from,
           to,
-          labels,
-          labelsIsDrawn,
+          alphaLabel,
         });
-
-        labelsIsDrawn = true;
 
         // preview canvas
         if (withPreview) {
@@ -333,19 +332,9 @@ class LineChart {
     axialShift = 0,
     bottom = 0,
     top = 0,
-    labels = [],
     alpha,
-    labelsIsDrawn = true,
-    nextLabelDivider,
   } = {}) {
-    const {
-      font,
-      offset,
-      devicePixelRatio,
-      theme: { labelColor },
-      labelWidthLimit,
-      labelDivider,
-    } = this;
+    const { offset, devicePixelRatio } = this;
     const { values, color } = data;
     const { left } = offset;
     const ctx = canvas.getContext("2d");
@@ -357,22 +346,11 @@ class LineChart {
     ctx.lineCap = "round";
     ctx.strokeStyle = hexToRGB(color, alpha);
     ctx.lineWidth = lineWidth;
-    const textPx = 14 * devicePixelRatio;
-    ctx.font = `${textPx}px ${font}`;
-    ctx.textAlign = "center";
     ctx.translate(0.5, 0.5);
 
     let startIndex = 0;
     const h = height - (bottom + top) * devicePixelRatio;
-    const lY = h + (bottom / 2 + top) * devicePixelRatio;
-    const lRY = (0.5 + lY) | 0;
-
-    const firstLabelWidth = ctx.measureText(labels[0]).width;
     const fromInt = Math.floor(from);
-    const drawFirstLabel = from * lineLength - labelWidthLimit < firstLabelWidth;
-    const divider = nextLabelDivider || labelDivider;
-    const remainderFrom = fromInt % divider;
-    const skipLabel = rateLimit((divider - 2) * lineLength, lineLength) <= labelWidthLimit;
 
     for (let i = fromInt; i < values.length; i++) {
       const roundLineCap = startIndex === 0 ? lineWidth / 2 : 0;
@@ -405,36 +383,6 @@ class LineChart {
           }
           ctx.stroke();
         }
-      }
-
-      if (!labelsIsDrawn) {
-        const label = labels[i];
-        const remainderIndex = startIndex % divider;
-        const lastLabel = startIndex === values.length - fromInt - 1;
-
-        ctx.save();
-        if (lastLabel) {
-          ctx.textAlign = "right";
-        } else if (i === 0) {
-          ctx.textAlign = "left";
-        }
-        ctx.fillStyle = labelColor;
-
-        // if (startIndex === 0 && drawFirstLabel && !skipLabel) {
-        //   ctx.textAlign = "left";
-        //   ctx.fillText(labels[0], rX - lineLength * fromInt, lRY);
-        // }
-
-        const prevI = i + divider - 1 - divider;
-        const nextI = i + divider - 1;
-
-        if ((divider > 1 && remainderFrom + remainderIndex === divider - 1) || divider === 1) {
-          ctx.fillText(label, rX, lRY);
-        } else if (startIndex === 0) {
-          const ggwp = rX - lineLength;
-        }
-
-        ctx.restore();
       }
 
       ctx.beginPath();
@@ -714,6 +662,7 @@ class LineChart {
       nodes: {
         canvas: { node: canvas },
       },
+      labelWidthLimit,
       labelDivider: prevLabelDivider,
     } = this;
 
@@ -745,7 +694,15 @@ class LineChart {
         duration,
         timing: easeInQuad,
         draw: (progress, { props }) => {
-          const { panelX, panelW, lineLength, from, to, axialShift } = props;
+          const {
+            panelX,
+            panelW,
+            lineLength,
+            from,
+            to,
+            axialShift,
+            // prev, next
+          } = props;
 
           const direction = prevMaxValue < nextMaxValue ? 1 : -1;
           const previewDirection = prevPreviewMaxValue < nextPreviewMaxValue ? 1 : -1;
@@ -761,12 +718,11 @@ class LineChart {
           const outProgress = 1 - progress;
 
           if (prevMaxValue !== nextMaxValue) {
-            if (nextData.length > 1 && prevMaxValue !== nextMaxValue) {
+            if (nextData.length > 1) {
               // in
               this.drawYAxis({ progress, translateY: slideIn, max: nextMaxValue });
             }
-
-            if (data.length > 1 && prevMaxValue !== nextMaxValue) {
+            if (data.length > 1) {
               // out
               this.drawYAxis({ progress: outProgress, translateY: slideOut, max: prevMaxValue });
             }
@@ -776,13 +732,42 @@ class LineChart {
 
           const diff = direction < 0 ? prevMaxValue - nextMaxValue : -(nextMaxValue - prevMaxValue);
           const slideY = prevMaxValue - diff * progress;
-
           const previewDiff = previewDirection < 0 ? prevPreviewMaxValue - nextPreviewMaxValue : -(nextPreviewMaxValue - prevPreviewMaxValue);
-
           const slideYPreview = prevPreviewMaxValue - previewDiff * progress;
 
+          if (labelIsChanged) {
+            const labelPx = labelWidthLimit / 2;
+            const labelX = nextLabelDivider > prevLabelDivider ? -(labelPx * progress) : -labelPx + labelPx * progress;
+            const alphaLabel = nextLabelDivider > prevLabelDivider ? outProgress : progress;
+
+            if (nextLabelDivider > prevLabelDivider) {
+              this.drawXAxis({
+                from,
+                to,
+                axialShift,
+                next: nextLabelDivider,
+                divider: prevLabelDivider,
+                lineLength,
+                labelX,
+                alpha: alphaLabel,
+              });
+            } else {
+              this.drawXAxis({
+                from,
+                to,
+                axialShift,
+                next: prevLabelDivider,
+                divider: nextLabelDivider,
+                lineLength,
+                labelX,
+                alpha: alphaLabel,
+              });
+            }
+          } else {
+            this.drawXAxis({ from, to, axialShift, divider: nextLabelDivider, lineLength });
+          }
+
           this.redraw({
-            nextLabelDivider,
             nextName,
             alpha: deletion ? outProgress : progress,
             data: dataForAnimation,
@@ -805,6 +790,14 @@ class LineChart {
         this.drawYAxis();
       }
 
+      this.drawXAxis({
+        from,
+        to,
+        axialShift,
+        divider: prevLabelDivider,
+        lineLength,
+      });
+
       this.redraw({
         data: dataForAnimation,
         panelX: nextX,
@@ -815,6 +808,64 @@ class LineChart {
         maxValue: nextMaxValue,
         axialShift,
       });
+    }
+  }
+
+  drawXAxis({ from = 0, to = 1, axialShift = 0, divider = 1, lineLength, labelX = 0, alpha = 1, next } = {}) {
+    const {
+      data,
+      font,
+      offset: { bottom, top, left },
+      devicePixelRatio,
+      theme: { labelColor },
+      nodes: {
+        canvas: { node: canvas },
+      },
+    } = this;
+
+    const labels = data[0].labels;
+
+    const { height } = this.getWithHeigthByRatio(canvas);
+    let startIndex = 0;
+    const fromInt = Math.floor(from);
+    const ctx = canvas.getContext("2d");
+
+    const textPx = 14 * devicePixelRatio;
+    const h = height - (bottom + top) * devicePixelRatio;
+    ctx.font = `${textPx}px ${font}`;
+    ctx.textAlign = "center";
+
+    const lY = h + (bottom / 2 + top) * devicePixelRatio;
+    const lRY = (0.5 + lY) | 0;
+    const remainderFrom = fromInt % divider;
+    const remainderFromNext = fromInt % next;
+
+    for (let i = fromInt; i < labels.length; i++) {
+      const label = labels[i];
+      const remainderIndex = startIndex % divider;
+      const remainderIndexNext = startIndex % next;
+      const x = lineLength * startIndex + (left * devicePixelRatio - axialShift);
+      const rX = (0.5 + x) | 0;
+      const lastLabel = startIndex === labels.length - fromInt - 1;
+
+      if (lastLabel) {
+        ctx.textAlign = "right";
+      } else if (i === 0) {
+        ctx.textAlign = "left";
+      }
+
+      if (next >= 1 && remainderFromNext + remainderIndexNext === next - 1) {
+        ctx.fillStyle = labelColor;
+        ctx.fillText(label, rX, lRY);
+      } else if (divider >= 1 && remainderFrom + remainderIndex === divider - 1) {
+        ctx.fillStyle = hexToRGB(labelColor, alpha);
+        ctx.fillText(label, rX - labelX, lRY);
+      }
+
+      startIndex += 1;
+      if (Math.ceil(to + 2) < i) {
+        break;
+      }
     }
   }
 
