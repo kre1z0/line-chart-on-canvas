@@ -1167,6 +1167,7 @@ class LineChart {
 
     const { width, height } = this.getWithHeigthByRatio(canvas);
     const ctx = canvas.getContext("2d");
+    ctx.textAlign = "left";
 
     const r = 5 * devicePixelRatio;
     const circleLw = 2 * devicePixelRatio;
