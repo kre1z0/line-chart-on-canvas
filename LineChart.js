@@ -827,10 +827,11 @@ class LineChart {
     const { height } = this.getWithHeigthByRatio(canvas);
 
     if (labelIsChanged) {
+      const props = { prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue };
       if (withoutThrottled) {
-        this.animateYAxis({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
+        this.animateYAxis(props);
       } else {
-        this.animateYAxisThrottled({ prevLabelDivider, nextLabelDivider, canvas, prevMaxValue, nextMaxValue });
+        this.animateYAxisThrottled(props);
       }
     } else {
       ctx.clearRect(0, height - bottom * devicePixelRatio, canvas.width, bottom * devicePixelRatio);
@@ -844,32 +845,23 @@ class LineChart {
     }
 
     if (maxValueIsChanged || chartsDataIsChanged) {
+      const props = {
+        dataForAnimation,
+        canvas,
+        deletion,
+        nextName,
+        prevMaxValue,
+        nextMaxValue,
+        prevPreviewMaxValue,
+        nextPreviewMaxValue,
+        withPreview,
+        nextData,
+      };
+
       if (withoutThrottled) {
-        this.animateXAxis({
-          dataForAnimation,
-          canvas,
-          deletion,
-          nextName,
-          prevMaxValue,
-          nextMaxValue,
-          prevPreviewMaxValue,
-          nextPreviewMaxValue,
-          withPreview,
-          nextData,
-        });
+        this.animateXAxis(props);
       } else {
-        this.animateXAxisThrottled({
-          dataForAnimation,
-          canvas,
-          deletion,
-          nextName,
-          prevMaxValue,
-          nextMaxValue,
-          prevPreviewMaxValue,
-          nextPreviewMaxValue,
-          withPreview,
-          nextData,
-        });
+        this.animateXAxisThrottled(props);
       }
     } else {
       this.clearCanvas(canvas, true);
