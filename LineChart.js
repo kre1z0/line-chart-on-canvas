@@ -38,7 +38,7 @@ class LineChart {
     this.root = root;
     this.header = header;
     this.offset = { left: 20, right: 20, bottom: 44, top: 24, ...offset };
-    this.labelWidthLimit = 64 * devicePixelRatio;
+    this.labelWidthLimit = 74 * devicePixelRatio;
     this.nodes = {
       container: {
         node: container,
