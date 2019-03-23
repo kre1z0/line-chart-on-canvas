@@ -29,14 +29,12 @@
         xhr.send();
       };
 
-      getJSON("./data.json", (err, res) => {
+      getJSON("./data.json", (err, data) => {
         let dark = true;
         const root = document.getElementById("root");
         const modeBtn = document.querySelector(".mode-btn");
 
         const charts = [];
-
-        const data = res.slice(0, 1);
 
         for (let i = 0; i < data.length; i++) {
           charts.push(
