@@ -17,10 +17,6 @@
 	background-color: #242F3E;
 }
 
-.tgLineChart-previewCanvas {
-
-}
-
 .tgLineChart-container canvas {
 	-webkit-tap-highlight-color: rgba(0,0,0,0);
 	-webkit-touch-callout: none;
